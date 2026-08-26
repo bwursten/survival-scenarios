@@ -140,7 +140,6 @@
   .stop-step:nth-child(4) .glyph{background:var(--pine)}
   .stop-step .word{font-family:var(--display);font-size:1.02em;display:block;line-height:1.2}
   .stop-step .say{font-size:.92em;color:var(--ink-soft)}
-  .pick-line{font-family:var(--display);font-size:1.18em;line-height:1.25;margin:1.4em 0 .8em}
 
   /* ================= status panel ================= */
   .status{
@@ -375,53 +374,56 @@
   var STORY = {
 
     start: {
-      mapLabel: 'Lost off trail, three hours of daylight left', pinLabel:'START',
+      mapLabel: 'Lost off-trail — 3 hours of light', pinLabel:'START',
       kicker: 'The situation',
       title: 'The Shortcut',
       art: { slot:'opening-woods', note:'Patrol standing in dense trees, no trail in sight, low afternoon light' },
       text: [
-        "Your Scout patrol decides to take a shortcut to get to another trail. But to do so, everyone walks into the woods, off trail for a few miles. You don't find the other trail and now everyone thinks they're lost.",
-        "You have two backpacks full of gear and three hours of daylight left."
+        "Your patrol decides to take a shortcut to reach another trail. Everyone leaves the path and walks into the woods for a few miles.",
+        "The other trail never appears. The woods look the same in every direction, and everyone is starting to think the same thing at the same time: we are lost.",
+        "You have two backpacks full of gear and about three hours of daylight."
       ],
       prompt: 'What should you do?',
       choices: [
-        { label:"Try to go back the way you came. You all agree to stay together and decide to set up camp when it gets dark if you're not back by then.",
+        { label:'Go back the way you came. Stay together, and set up camp if it gets dark before you are out.',
           short:'Backtrack together', to:'p1', time:50 },
-        { label:"Find a place in the woods to set up camp for the night. You don't have a tent in the backpacks, but you have two colorful ponchos.",
+        { label:'Find a place to camp for the night. There is no tent, but you have two brightly colored ponchos.',
           short:'Make camp', to:'p2', time:30 },
-        { label:"Push forward! Maybe if you all start running, you'll find the other trail quicker.",
+        { label:'Push forward. If everyone runs, maybe you will find the trail faster.',
           short:'Run for it', to:'p3', time:70, effects:{ morale:-1 } }
       ]
     },
 
     /* ---------------- PATH 1: backtrack ---------------- */
     p1: {
-      mapLabel: "Try to go back the way you came", pinLabel:'Go back the way you came',
-      kicker: 'Path 1',
-      title: 'Going Back',
+      mapLabel: 'Backtrack together', pinLabel:'Backtrack together',
+      kicker: 'Heading back',
+      title: 'Retracing Your Steps',
       art: { slot:'backtrack', note:'Patrol hiking single file back through trees, one Scout checking a map' },
       text: [
-        "Try to go back the way you came. You all agree to stay together and decide to set up camp when it gets dark if you're not back by then."
+        "You turn around and start back, single file, nobody wandering off. That part everyone gets right.",
+        "The ground slopes down and you hear running water ahead. Nothing looks quite the way you remember it."
       ],
-      prompt: 'What should you do?',
+      prompt: 'How do you find your way?',
       choices: [
-        { label:'Take your time and study the map. Look for familiar landmarks.',
+        { label:'Slow down. Get out the map and look for landmarks you passed on the way in.',
           short:'Study the map', to:'end_trail', time:55 },
-        { label:'You come across an unknown river and attempt to cross it on slippery rocks.',
-          short:'Cross the river', to:'p1b', time:90 }
+        { label:'Cross the river on the rocks. The far bank looks like the way you came.',
+          short:'Cross the river', to:'p1b', time:60 }
       ]
     },
 
     end_trail: {
-      mapLabel: 'Take your time and study the map', pinLabel:'Back to the troop',
+      mapLabel: 'Study the map and landmarks', pinLabel:'Found the trail',
       ending: 'good',
       kicker: 'Outcome',
-      title: 'Back to the Troop',
+      title: 'You Found the Trail',
       art: { slot:'found-trail', note:'Scouts stepping back onto a marked trail, relieved' },
       text: [
-        "You discover the original trail, and you head back to the troop."
+        "One of the Scouts recognizes a split boulder from the hike in. From there the shape of the ridge finally makes sense.",
+        "Twenty minutes later your boots are back on packed dirt, and you are walking toward the troop with light to spare."
       ],
-      caption: "Watch for landmarks as you hike. They might prove helpful if you choose to backtrack. A map and compass or cellphone are useful tools. It's important to know how to use them. But if you're not confident, you can quickly backtrack and stay put.",
+      caption: "Watch for landmarks as you hike — they may prove helpful if you choose to backtrack. A map and compass or a cellphone are useful tools, and it is important to know how to use them. But if you are not confident, backtrack early and stay put.",
       facilitator: [
         "Name three landmarks from our last hike. Could you find them again?",
         "How would this have gone if nobody had looked at the map before leaving the trailhead?"
@@ -429,20 +431,23 @@
     },
 
     p1b: {
-      mapLabel: 'Attempt to cross the river on slippery rocks', pinLabel:'River crossing',
-      kicker: 'Path 1-B',
-      consequence: "Two Scouts slip and fall in the water. Now they're wet and cold, and it's dark.",
-      title: 'Wet, Cold and Dark',
+      mapLabel: 'Cross the river on slippery rocks', pinLabel:'River crossing',
+      kicker: 'That went badly',
+      consequence: "You step out onto the rocks. They are slick with spray. Two Scouts go down into the water and come up soaked to the skin.",
+      title: 'Wet, and Losing the Light',
       art: { slot:'river-crossing', note:'Rocky river crossing at dusk, two Scouts soaked on the bank' },
-      caption: "Be careful where you cross a body of water. Keep your shoes on and use a walking stick to maintain balance. If you get wet, change into dry clothes to prevent hypothermia.",
-      time: 40,
-      effects: { wet:true, morale:-1, night:true },
+      text: [
+        "The packs stayed dry, which is lucky. Two of your patrol did not.",
+        "The sun is already behind the ridge and the temperature is dropping with it. You have a little over an hour of usable light and two Scouts in wet clothes."
+      ],
+      caption: "Be careful where you cross a body of water. Keep your shoes on and use a walking stick for balance. If you get wet, change into dry clothes to prevent hypothermia.",
+      effects: { wet:true, morale:-1 },
       prompt: 'What now?',
       choices: [
-        { label:"Stop right here. Get the wet Scouts into dry clothes from the packs, then start a fire.",
-          short:'Dry clothes and fire', to:'end_fire_night', time:0, effects:{ fire:true, dry:true } },
-        { label:"Keep walking to warm up. Moving's better than sitting still in the cold.",
-          short:'Keep walking wet', to:'end_hypothermia', time:0, effects:{ morale:-1 } }
+        { label:'Stop right here. Dry clothes out of the packs, then get a fire going.',
+          short:'Dry clothes and fire', to:'end_fire_night', time:40, effects:{ fire:true, dry:true } },
+        { label:'Keep walking to warm up. Moving is better than sitting still.',
+          short:'Keep walking wet', to:'end_hypothermia', time:70, effects:{ morale:-1 } }
       ],
       facilitator: [
         "What is the first thing you do for someone who just fell in a creek in October?",
@@ -457,12 +462,12 @@
       title: 'A Cold Night, But a Safe One',
       art: { slot:'night-fire', note:'Small campfire at night, Scouts in dry layers close around it' },
       text: [
-        "You get the wet Scouts into dry layers before the shivering really sets in, and the fire takes on the third match.",
-        "Nobody sleeps much. But at first light a searcher spots your smoke from the ridge, and it's over."
+        "You get the wet Scouts into dry layers before the shivering really sets in, and the fire takes on the third match — with just enough light left to gather wood.",
+        "Nobody sleeps much. But at first light a searcher spots your smoke from the ridge, and it is over."
       ],
       caption: "Wet clothes pull heat out of you many times faster than cold air does. Getting dry and getting warm is more urgent than covering more ground.",
       facilitator: [
-        "What's in your pack right now that would keep you warm if you fell in a creek?",
+        "What is in your pack right now that would keep you warm if you fell in a creek?",
         "Why is a fire worth stopping for even when everyone still feels fine?"
       ]
     },
@@ -474,10 +479,10 @@
       title: 'Too Cold to Think',
       art: { slot:'hypothermia', note:'Dark woods, patrol stopped, one Scout wrapped in a jacket' },
       text: [
-        "Walking doesn't warm the wet Scouts up. The wind does the opposite.",
-        "Within an hour one of them is shivering hard, fumbling with his pack, and answering questions that don't quite match what was asked. That's early hypothermia, and it's a real emergency. Your patrol has to stop and warm him up right now, in the dark, with no camp set up."
+        "Walking does not warm the wet Scouts up. The wind does the opposite.",
+        "Within an hour one of them is shivering hard, fumbling with his pack, and answering questions that do not quite match what was asked. That is early hypothermia, and it is a real emergency. Your patrol has to stop and warm him up right now — in the dark, with no camp set up."
       ],
-      caption: "Cold, wet and tired is how a bad afternoon turns into a dangerous night. Learn the early signs of hypothermia: shivering, clumsiness, confusion and slurred speech. Stop, get dry, get warm and get help.",
+      caption: "Cold, wet, and tired is how a bad afternoon turns into a dangerous night. Learn the early signs of hypothermia: shivering, clumsiness, confusion, and slurred speech. Stop, get dry, get warm, and get help.",
       facilitator: [
         "Why does 'keep moving to warm up' sound so reasonable, and when is it wrong?",
         "How would you tell the difference between a Scout who is cold and a Scout who is in trouble?"
@@ -486,32 +491,34 @@
 
     /* ---------------- PATH 2: make camp ---------------- */
     p2: {
-      mapLabel: 'Find a place in the woods to set up camp', pinLabel:'Set up camp',
-      kicker: 'Path 2',
-      title: 'Setting Up Camp',
+      mapLabel: 'Set up camp for the night', pinLabel:'Make camp',
+      kicker: 'Staying put',
+      title: 'Making Camp',
       art: { slot:'campsite', note:'Flat clearing with deadfall branches, two packs open on the ground' },
       text: [
-        "Find a place in the woods to set up camp for the night. You don't have a tent in the backpacks, but you have two colorful ponchos."
+        "You find a flat spot out of the wind with plenty of dead branches nearby.",
+        "No tent. But the packs have two brightly colored ponchos, a full box of matches, food for a day, and a first aid kit. There is still light to work by."
       ],
-      prompt: 'What should you do?',
+      prompt: 'How does camp come together?',
       choices: [
-        { label:'No one can decide on how to set up camp and arguments begin.',
+        { label:'Argue it out. Everyone has a different idea about how camp should be set up.',
           short:'Argue about it', to:'p2a', time:150, effects:{ morale:-2 } },
-        { label:'Everyone takes a different task. One person gathers branches to create a large shelter. Another ties the ponchos to trees so rescuers might see them. Others use matches to start a fire.',
-          short:'Everyone takes a task', to:'end_ponchos', time:120, effects:{ shelter:true, signal:true, fire:true, morale:1 } }
+        { label:'Split up the jobs. One builds shelter, one hangs the ponchos where they can be seen, others start a fire.',
+          short:'Split up the jobs', to:'end_ponchos', time:120, effects:{ shelter:true, signal:true, fire:true, morale:1 } }
       ]
     },
 
     end_ponchos: {
-      mapLabel: 'Everyone takes a different task', pinLabel:'Rescuers find you',
+      mapLabel: 'Everyone takes a job', pinLabel:'Rescued: ponchos seen',
       ending: 'good',
       kicker: 'Outcome',
-      title: 'Rescuers Find Your Patrol',
+      title: 'Found Before Breakfast',
       art: { slot:'poncho-signal', note:'Bright ponchos tied between two trees above a branch shelter and fire' },
       text: [
-        "Rescuers see the ponchos and find your patrol."
+        "The shelter is not pretty, but it is dry. The fire holds all night.",
+        "The ponchos hang from two branches at the open edge of the clearing — bright orange against all that green. A search team spots them from the ridge the next morning and walks straight to you."
       ],
-      caption: "With whatever shelter you create, make it visible for rescuers. Bright-colored items, signal messages and fires can all point people to you. If you're not confident on how to backtrack, staying put is your best option.",
+      caption: "Whatever shelter you make, make it visible. Bright-colored items, signal messages, and fires all point people toward you. If you are not confident about backtracking, staying put is your best option.",
       facilitator: [
         "What in your pack is the most visible thing from a hundred yards away? From the air?",
         "Who assigned the jobs in this version? What makes that easier to do before people get scared?"
@@ -519,18 +526,21 @@
     },
 
     p2a: {
-      mapLabel: 'No one can decide how to set up camp', pinLabel:'Arguments begin',
-      kicker: 'Path 2-A',
-      consequence: "Everyone is in a foul mood and tries to sleep on the ground without shelter or a fire.",
-      title: 'A Foul Mood',
+      mapLabel: 'Nobody can agree — arguments begin', pinLabel:'Argument in camp',
+      kicker: 'The light is gone',
+      consequence: "The rest of the daylight disappears into the argument. Nothing gets built, nothing gets hung, and nobody wants to be the one to give in. It gets dark while you are all still talking.",
+      title: 'A Long Night on Cold Ground',
       art: { slot:'argument', note:'Scouts standing apart in a dim clearing, arms crossed, no camp built' },
-      caption: "It can be challenging to stay cheerful, but many people who have gotten through survival situations have credited staying positive to their success.",
+      text: [
+        "You sleep on the ground with no shelter and no fire. Everyone is cold, hungry, and in a foul mood by morning — but everyone is still together, and the packs are still full."
+      ],
+      caption: "It can be challenging to stay cheerful, but many people who have come through survival situations credit staying positive for their success.",
       effects: { night:true },
-      prompt: "It's morning. What do you do with it?",
+      prompt: 'Morning. What do you do with it?',
       choices: [
-        { label:"Call it. Assign the jobs yourself, tie up the ponchos and get a fire going.",
+        { label:'Call it. Assign the jobs yourself, hang the ponchos, get a fire going.',
           short:'Regroup and assign jobs', to:'end_second_day', time:0, effects:{ shelter:true, signal:true, fire:true, morale:2 } },
-        { label:"Everybody spread out and look for help on your own.",
+        { label:'Everybody spread out and look for help on your own.',
           short:'Scatter and search alone', to:'end_scattered', time:0, effects:{ split:true, morale:-1 } }
       ],
       facilitator: [
@@ -547,9 +557,9 @@
       art: { slot:'second-day', note:'Morning light, ponchos going up, smoke rising from a new fire' },
       text: [
         "Somebody finally says \"let's just do it\" and starts handing out jobs. Ponchos up. Fire lit. Everyone accounted for.",
-        "A search plane spots the smoke that afternoon. You lost a cold, miserable night you didn't have to lose, but you're found."
+        "A search plane spots the smoke that afternoon. You lost a cold, miserable night you did not have to lose — but you are found."
       ],
-      caption: "Morale is equipment. A patrol that keeps its temper builds shelter, keeps a fire and gets found. Someone has to be the one who stops the argument and starts the work. That can be you.",
+      caption: "Morale is equipment. A patrol that keeps its temper builds shelter, keeps a fire, and gets found. Someone has to be the one who stops the argument and starts the work — that can be you.",
       facilitator: [
         "Who in this room would be the one to say \"let's just do it\"? What makes that hard?",
         "What did the argument cost, in hours and in body heat?"
@@ -564,9 +574,9 @@
       art: { slot:'scattered', note:'Empty clearing, single figures disappearing between trees in different directions' },
       text: [
         "Six Scouts walk off in six directions into unfamiliar woods. Within twenty minutes nobody can hear anybody else.",
-        "Searchers aren't looking for one lost patrol anymore. They're looking for six lost Scouts, spread across miles of country."
+        "Searchers are no longer looking for one lost patrol. They are looking for six lost Scouts, spread across miles of country."
       ],
-      caption: "Never split up, and never go off alone. A group is easier to find, safer and far better at solving problems than any one person.",
+      caption: "Never split up, and never go off alone. A group is easier to find, safer, and far better at solving problems than any one person.",
       facilitator: [
         "Why does splitting up feel so productive, and why is it almost always wrong?",
         "What is the rule in our troop about leaving the group?"
@@ -575,34 +585,40 @@
 
     /* ---------------- PATH 3: run ---------------- */
     p3: {
-      mapLabel: 'Push forward and start running', pinLabel:'Push forward!',
-      kicker: 'Path 3',
-      title: 'Pushing Forward',
+      mapLabel: 'Run to find the trail faster', pinLabel:'Run for it',
+      kicker: 'Forty-five minutes gone',
+      consequenceTone: 'neutral',
+      consequence: "You break into a run. Branches whip past, packs bang against your backs, and the woods all look the same at speed.",
+      title: 'Running',
       art: { slot:'running', note:'Scouts running through undergrowth, packs bouncing, motion blur' },
       text: [
-        "Push forward! Maybe if you all start running, you'll find the other trail quicker."
+        "No trail. Just more trees, and less light than you started with. Everyone is breathing hard and nobody is thinking clearly."
       ],
-      prompt: 'What should you do?',
+      prompt: 'Keep going?',
       choices: [
-        { label:'One Scout in your group trips and twists his ankle.',
+        { label:'Keep pushing at a run. It has to be just ahead.',
           short:'Keep running', to:'p3a', time:25, effects:{ morale:-1 } },
-        { label:"You can't find the trail. Now you're deeper into the woods.",
-          short:'Deeper into the woods', to:'p3b', time:45 }
+        { label:'Slow to a fast hike, same direction, and keep looking.',
+          short:'Hike on, same direction', to:'p3b', time:45 }
       ]
     },
 
     p3a: {
-      mapLabel: 'One Scout trips and twists his ankle', pinLabel:'Twisted ankle',
-      kicker: 'Path 3-A',
-      consequence: "One Scout in your group trips and twists his ankle.",
+      mapLabel: 'Keep running — a Scout is injured', pinLabel:'Twisted ankle',
+      kicker: 'Somebody is hurt',
+      consequence: "Ten minutes later a Scout catches a root and goes down hard. His ankle is already swelling. He can walk — barely, and not fast.",
       title: 'A Twisted Ankle',
       art: { slot:'twisted-ankle', note:'Scout sitting on the ground holding his ankle, patrol gathered around' },
+      text: [
+        "You have not quite an hour and a half of light left, one Scout who cannot move quickly, and a first aid kit in the bottom of a pack."
+      ],
+      caption: "Taking off without a direction is a very risky decision — you can end up more lost than when you started, and injuries happen when people hurry.",
       effects: { injured:true, morale:-1 },
-      prompt: 'What should you do?',
+      prompt: 'What do you do with the light you have left?',
       choices: [
-        { label:"Stop right here. Wrap the ankle, get camp set up and tie the ponchos to trees while you've still got light.",
-          short:'Stop, treat and signal', to:'end_recovered', time:45, effects:{ shelter:true, signal:true, fire:true, morale:2 } },
-        { label:'The group splits up; some stay with the injured Scout. The others keep going but venture deeper into the woods.',
+        { label:'Stop here. Wrap the ankle, get camp up, and hang the ponchos while you can still see.',
+          short:'Stop, treat, and signal', to:'end_recovered', time:45, effects:{ shelter:true, signal:true, fire:true, morale:2 } },
+        { label:'Split up. Some stay with him, the rest go for help.',
           short:'Split the group', to:'end_split', time:85, effects:{ split:true, morale:-1 } }
       ],
       facilitator: [
@@ -612,16 +628,16 @@
     },
 
     end_recovered: {
-      mapLabel: 'Stop, treat the ankle and signal', pinLabel:'Stopped and signaled',
+      mapLabel: 'Stop, treat the injury, and signal', pinLabel:'Stopped and signaled',
       ending: 'good',
       kicker: 'Outcome',
       title: 'You Got It Back Under Control',
       art: { slot:'recovered-camp', note:'Wrapped ankle propped up, ponchos hung in the open, fire burning at dusk' },
       text: [
-        "Somebody finally says STOP, and this time the patrol actually does it. The ankle gets wrapped. The ponchos go up in the open where they'll show. A fire's burning before full dark, and nobody's alone.",
-        "Searchers reach you the next morning. You made every mistake available in the first hour, and then you stopped making them."
+        "Somebody finally says STOP, and this time the patrol actually does it. The ankle gets wrapped. The ponchos go up in the open where they will show. A fire is burning before full dark, and nobody is alone.",
+        "Searchers reach you the next morning. You made every mistake available in the first hour — and then you stopped making them."
       ],
-      caption: "Panicking early doesn't have to decide how this ends. The moment you stop, think, observe and plan, you're doing the right thing, even if you spent the first hour doing the wrong one.",
+      caption: "Panicking early does not have to decide how this ends. The moment you stop, think, observe, and plan, you are doing the right thing, even if you spent the first hour doing the wrong one.",
       facilitator: [
         "What made it hard to be the person who said stop?",
         "How much of this scenario could still be fixed after an hour of bad decisions? How much could not?"
@@ -629,15 +645,16 @@
     },
 
     end_split: {
-      mapLabel: 'The group splits up', pinLabel:'The group splits up',
+      mapLabel: 'Split the group', pinLabel:'Split the group',
       ending: 'bad',
       kicker: 'Outcome',
-      title: 'Multiple Groups, All Lost',
+      title: 'Two Lost Groups',
       art: { slot:'split-group', note:'Two small groups moving apart in fading light' },
       text: [
-        "The group splits up; some stay with the injured Scout. The others keep going but venture deeper into the woods."
+        "Three Scouts stay in the clearing with the twisted ankle. Three head off toward where they think the trail is.",
+        "Within an hour neither group knows where the other one is, and neither one is anywhere searchers are looking. One lost patrol just became two."
       ],
-      caption: "Splitting up is a bad idea. Now you have multiple groups that are lost.",
+      caption: "Splitting up is a bad idea. Now there are multiple groups lost, and rescuers have to find all of them.",
       facilitator: [
         "What would have to be true before splitting a group is ever the right call?",
         "If half the patrol walks away, what happens to the gear? The first aid kit? The matches?"
@@ -645,22 +662,25 @@
     },
 
     p3b: {
-      mapLabel: "You can't find the trail — deeper into the woods", pinLabel:'Deeper into woods',
-      kicker: 'Path 3-B',
-      consequence: "You can't find the trail. Now you're deeper into the woods.",
+      mapLabel: 'Hike deeper into the woods', pinLabel:'Deeper into woods',
+      kicker: 'Deeper in',
+      consequence: "You cannot find the trail. The woods get thicker, the ground gets steeper, and you no longer have any idea which direction you came from.",
       title: 'Deeper Into the Woods',
       art: { slot:'deeper-woods', note:'Steep, dense forest, long shadows, no path anywhere' },
+      text: [
+        "Maybe an hour of light left. Two full packs. Everyone still together, and everyone still uninjured. That is more than a lot of people have."
+      ],
       caption: "Taking off without direction is a very risky decision. You could find yourself even more lost.",
-      prompt: "You've got the last of the light. How do you spend it?",
+      prompt: 'Last of the light. Spend it how?',
       choices: [
-        { label:"Stop. Take stock of the packs and set up a camp you can be seen from while you've still got light.",
+        { label:'Stop. Take stock of the packs and set up a camp you can be seen from while there is light.',
           short:'Stop and set up camp', to:'end_recovered_late', time:25, effects:{ shelter:true, signal:true, fire:true, morale:1 } },
-        { label:"Keep going. The trail's got to be close.",
+        { label:'Keep going. The trail has to be close.',
           short:'Keep going in the dark', to:'end_dark', time:65, effects:{ morale:-2 } }
       ],
       facilitator: [
-        "How do you know when you've gone from 'turned around' to 'lost'?",
-        "What's the last useful thing you can do with forty minutes of daylight?"
+        "How do you know when you have gone from 'turned around' to 'lost'?",
+        "What is the last useful thing you can do with forty minutes of daylight?"
       ]
     },
 
@@ -671,13 +691,13 @@
       title: 'Still Time to Do It Right',
       art: { slot:'late-camp', note:'Branch shelter and hung ponchos in the last of the daylight' },
       text: [
-        "You burned two hours going the wrong way, and you can't get those back.",
-        "What you've still got is light, two packs and a patrol that's together. Ponchos up. Shelter built. Fire lit. That's all rescuers need, and they find you in the morning."
+        "You burned two hours going the wrong way. You cannot get those back.",
+        "What you still have is light, two packs, and a patrol that is together. Ponchos up. Shelter built. Fire lit. That is all rescuers need, and they find you in the morning."
       ],
-      caption: "You can't get back the time you spent hurrying, but you can stop spending it. Set up while you've still got light. Everything is harder in the dark.",
+      caption: "You cannot get back the time you spent hurrying, but you can stop spending it. Set up while you still have light — everything is harder in the dark.",
       facilitator: [
-        "What's the difference between the last forty minutes of light and the first forty minutes of dark?",
-        "Why is it hard to stop after you've already spent two hours being wrong?"
+        "What is the difference between the last forty minutes of light and the first forty minutes of dark?",
+        "Why is it hard to stop after you have already invested two hours in being wrong?"
       ]
     },
 
@@ -688,10 +708,10 @@
       title: 'Deep and Dark',
       art: { slot:'lost-dark', note:'Near-black forest, one small flashlight beam on tangled ground' },
       text: [
-        "The light goes and you're still walking. No trail, no landmarks, no idea which way is out, and now you can't see the ground under your feet.",
-        "You're miles from anywhere anyone is searching, with no shelter and no fire, and every step is taking you farther away."
+        "The light goes and you are still walking. No trail, no landmarks, no idea which way is out — and now you cannot see the ground under your feet.",
+        "You are miles from anywhere anyone is searching, with no shelter and no fire, and every step is taking you farther away."
       ],
-      caption: "Every minute you spend moving without a plan takes you farther from where searchers will look. When you realize you're lost, the ground you're standing on is usually the best place to stop.",
+      caption: "Every minute you spend moving without a plan takes you farther from where searchers will look. When you realize you are lost, the ground you are standing on is usually the best place to stop.",
       facilitator: [
         "Where do search teams start looking? How far can a running patrol get from that spot?",
         "What was the last moment in this story where a good decision was still easy?"
@@ -991,21 +1011,20 @@
     var card = el('section','card scene');
 
     card.appendChild(el('p','kicker','Before you decide anything'));
-    card.appendChild(el('h1', null, "It's important to remain calm and STOP."));
+    card.appendChild(el('h1', null, 'When you realize you are lost, STOP.'));
 
     var hero = el('div','stop-hero');
 
     var left = el('div','sign-wrap');
     left.appendChild(stopSign());
-    left.appendChild(el('p','sign-caption',"Treat it like the sign. You don't roll through it. You come to a full stop first."));
+    left.appendChild(el('p','sign-caption','Treat it like the sign. You do not roll through it — you come to a full stop first.'));
     hero.appendChild(left);
 
     var right = el('div');
     var art = artBlock({ slot:'stop-hero', note:'Patrol halted mid-stride in the woods, one Scout raising a hand to stop the others' });
     if (art) right.appendChild(art);
     right.appendChild(el('p', null,
-      'Many people panic at the first signs that something has gone wrong. Frantic decisions often lead down disastrous paths. ' +
-      "It's important to remain calm and STOP (Stop, Think, Observe and Plan)."));
+      'Many people panic at the first sign that something has gone wrong, and frantic decisions lead down disastrous paths. Four steps, in this order:'));
     hero.appendChild(right);
 
     card.appendChild(hero);
@@ -1022,10 +1041,9 @@
     });
     card.appendChild(ul);
 
-    card.appendChild(el('p','pick-line','Pick a path to help these Scouts find safety.'));
-
-    var go = el('button','btn btn-primary','Pick a path');
+    var go = el('button','btn btn-primary','Start the scenario');
     go.type = 'button';
+    go.style.marginTop = '1.4em';
     go.addEventListener('click', function(){
       state = freshState(); undoStack = []; render();
     });
@@ -1061,7 +1079,7 @@
       note.appendChild(icon('i-clock'));
       note.appendChild(document.createTextNode(state.daylight > 0
         ? 'You still had ' + formatTime(state.daylight) + ' of daylight when you stopped moving and started working.'
-        : 'The light was already gone by the time you stopped moving.'));
+        : 'You were still moving when the light ran out.'));
       card.appendChild(note);
     } else if (node.kicker){
       card.appendChild(el('p','kicker', node.kicker));
