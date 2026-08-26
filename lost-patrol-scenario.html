@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost Patrol: A Survival Scenario</title>
+
+<!--
+  ============================================================================
+  LOST PATROL — interactive survival scenario
+  Single self-contained file. No cookies, no tracking, no browser storage.
+  One external request only: Google Fonts (Alfa Slab One + Source Sans 3).
+  To remove even that, delete the two <link> tags below; the system-font
+  fallbacks in the CSS take over automatically.
+
+  ADDING ILLUSTRATIONS: search for `art:` — every scene has a slot.
+  Add a `src` and `alt` and that scene renders the image instead of the
+  placeholder box. See EMBED-INSTRUCTIONS.md.
+
+  ADDING AN ILLUSTRATED TRAIL MAP: see MAP_BACKGROUND near the top of the
+  script. Point it at an image and the drawn terrain hides, leaving the
+  pins and trail lines on top of your artwork.
+  ============================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Source+Sans+3:wght@400;600;700;900&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    /* --- national park poster palette --- */
+    --orange:#E8552A;
+    --orange-dk:#C43F1B;
+    --gold:#F2A93B;
+    --gold-lt:#FCE3B0;
+    --teal:#1F9C9C;
+    --teal-lt:#D3EDEC;
+    --teal-dk:#12706F;
+    --pine:#14503C;
+    --pine-lt:#DCEBE0;
+    --moss:#4C8A5B;
+    --cream:#FFF8EC;
+    --paper:#FFFDF7;
+    --ink:#22221E;
+    --ink-soft:#6A6558;
+    --line:#E4D9C2;
+    --line-dk:#CDBE9C;
+    --sky:#7CC5D8;
+
+    --radius:16px;
+    --pad:clamp(16px, 4vw, 30px);
+    --fs:16.5px;
+
+    --display:"Alfa Slab One", Rockwell, "Roboto Slab", Georgia, serif;
+    --body:"Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--body);
+    font-size:var(--fs);
+    line-height:1.6;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 12% -8%, rgba(242,169,59,.20), transparent 42%),
+      radial-gradient(circle at 92% 4%, rgba(31,156,156,.16), transparent 38%),
+      var(--cream);
+    -webkit-text-size-adjust:100%;
+  }
+  body.meeting{--fs:23px}
+  #app{max-width:820px;margin:0 auto;padding:var(--pad)}
+  body.meeting #app{max-width:1180px}
+
+  /* ================= shared ================= */
+  h1,h2,h3{font-family:var(--display);font-weight:400;line-height:1.12;margin:0 0 .5em;letter-spacing:.01em}
+  h1{font-size:2.1em}
+  h2{font-size:1.55em}
+  h3{font-size:1.1em}
+  p{margin:0 0 1em}
+  .kicker{
+    font-size:.72em;letter-spacing:.16em;text-transform:uppercase;
+    font-weight:900;color:var(--teal-dk);margin:0 0 .55em;
+  }
+  .card{
+    background:var(--paper);border:2px solid var(--line);border-radius:var(--radius);
+    padding:var(--pad);box-shadow:0 3px 0 var(--line), 0 10px 24px rgba(34,34,30,.06);
+  }
+  .btn{
+    font:inherit;font-family:var(--body);font-weight:700;cursor:pointer;
+    border-radius:12px;border:2px solid transparent;padding:.7em 1.3em;
+    transition:transform .08s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .btn:active{transform:translateY(2px)}
+  .btn-primary{background:var(--orange);color:#fff;box-shadow:0 3px 0 var(--orange-dk)}
+  .btn-primary:hover{background:#f06034}
+  .btn-primary:active{box-shadow:0 1px 0 var(--orange-dk)}
+  .btn-ghost{background:var(--paper);color:var(--ink-soft);border-color:var(--line-dk)}
+  .btn-ghost:hover{background:var(--gold-lt);color:var(--ink)}
+  .btn-sm{font-size:.85em;padding:.5em 1em}
+  :focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .icon{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+  /* ================= top bar ================= */
+  .topbar{display:flex;align-items:center;gap:.75em;flex-wrap:wrap;margin-bottom:1.1em}
+  .brand{
+    font-family:var(--display);font-size:1.15em;margin-right:auto;color:var(--pine);
+    display:inline-flex;align-items:center;gap:.5em;
+  }
+  .brand .blaze{
+    width:1.1em;height:1.1em;border-radius:4px;background:var(--orange);
+    display:inline-block;transform:rotate(45deg);
+  }
+  .mode-toggle{
+    font:inherit;font-size:.82em;font-weight:700;cursor:pointer;
+    background:var(--paper);border:2px solid var(--line-dk);border-radius:999px;
+    padding:.42em 1em;color:var(--ink-soft);display:inline-flex;align-items:center;gap:.5em;
+  }
+  .mode-toggle[aria-pressed="true"]{background:var(--teal);color:#fff;border-color:var(--teal-dk)}
+  .mode-toggle .icon{width:1.05em;height:1.05em}
+
+  /* ================= STOP screen ================= */
+  .stop-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:var(--pad);align-items:center}
+  @media (max-width:640px){ .stop-hero{grid-template-columns:1fr} }
+  .sign-wrap{display:grid;place-items:center;gap:.9em}
+  .stop-sign{width:min(74%,240px);height:auto;filter:drop-shadow(0 6px 0 rgba(0,0,0,.16))}
+  .sign-caption{font-size:.8em;font-weight:700;color:var(--ink-soft);text-align:center;max-width:20em}
+  .stop-steps{list-style:none;margin:1.4em 0 0;padding:0;display:grid;gap:.7em}
+  .stop-step{
+    display:flex;gap:.85em;align-items:flex-start;
+    background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:.75em .9em;
+  }
+  .stop-step .glyph{
+    flex:none;width:2.1em;height:2.1em;border-radius:9px;display:grid;place-items:center;
+    font-family:var(--display);font-size:1.05em;color:#fff;
+  }
+  .stop-step:nth-child(1) .glyph{background:var(--orange)}
+  .stop-step:nth-child(2) .glyph{background:var(--gold)}
+  .stop-step:nth-child(3) .glyph{background:var(--teal)}
+  .stop-step:nth-child(4) .glyph{background:var(--pine)}
+  .stop-step .word{font-family:var(--display);font-size:1.02em;display:block;line-height:1.2}
+  .stop-step .say{font-size:.92em;color:var(--ink-soft)}
+
+  /* ================= status panel ================= */
+  .status{
+    background:var(--paper);border:2px solid var(--line);border-radius:var(--radius);
+    padding:.9em;margin-bottom:1.1em;box-shadow:0 3px 0 var(--line);
+  }
+  .status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6em}
+  .tile{
+    border:2px solid var(--line);border-radius:12px;background:#fff;
+    padding:.6em .7em;display:flex;flex-direction:column;gap:.25em;min-width:0;
+  }
+  .tile .t-label{font-size:.63em;letter-spacing:.12em;text-transform:uppercase;font-weight:900;color:var(--ink-soft)}
+  .tile .t-value{font-size:.88em;font-weight:700;line-height:1.2}
+  .tile .t-row{display:flex;align-items:center;gap:.45em}
+  .tile .icon{width:1.45em;height:1.45em;stroke-width:1.8}
+  .tile.off{background:#F6F2E8;border-color:var(--line);color:#9A9384}
+  .tile.off .t-value{color:#9A9384}
+  .tile.on{border-color:var(--moss);background:var(--pine-lt);color:var(--pine)}
+  .tile.warn{border-color:var(--gold);background:var(--gold-lt);color:#7C550D}
+  .tile.alert{border-color:var(--orange);background:#FDE6DE;color:var(--orange-dk)}
+  .tile-day{grid-column:span 2;flex-direction:row;align-items:center;gap:.85em}
+  .tile-day .t-block{flex:none}
+  .tile-day .t-value{font-size:1.15em;font-family:var(--display);font-weight:400}
+  .sunarc{flex:1;min-width:0;max-width:220px;height:auto;display:block;border-radius:8px;overflow:hidden}
+  .morale-bars{display:flex;gap:3px;align-items:flex-end;height:1.3em}
+  .morale-bars span{width:.42em;border-radius:2px;background:currentColor;opacity:.22}
+  .morale-bars span.lit{opacity:1}
+  .morale-bars span:nth-child(1){height:40%}
+  .morale-bars span:nth-child(2){height:60%}
+  .morale-bars span:nth-child(3){height:80%}
+  .morale-bars span:nth-child(4){height:100%}
+  @media (max-width:620px){
+    .status{padding:.6em}
+    .status-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:.4em}
+    .tile{padding:.45em .4em;align-items:center;text-align:center;gap:.15em}
+    .tile .t-row{flex-direction:column;gap:.15em}
+    .tile .t-label{font-size:.58em;letter-spacing:.06em}
+    .tile .t-value{font-size:.72em}
+    .tile-day{grid-column:span 3;align-items:center;text-align:left;gap:.6em}
+    .tile-day .t-row{flex-direction:row}
+    .sunarc{max-width:170px}
+  }
+
+  /* ================= breadcrumb ================= */
+  .breadcrumb{font-size:.78em;color:var(--ink-soft);margin-bottom:.8em;font-weight:600}
+  .breadcrumb ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.3em .5em}
+  .breadcrumb li{background:var(--gold-lt);border-radius:999px;padding:.15em .7em}
+
+  /* ================= scene ================= */
+  .scene{animation:rise .3s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){ .scene{animation:none} * {transition:none !important} }
+  .scene .body{font-size:1.04em}
+  .scene .body p:last-child{margin-bottom:0}
+  .prompt{
+    font-family:var(--display);font-size:1.22em;line-height:1.2;
+    margin:1.3em 0 .8em;padding-top:1em;border-top:3px dotted var(--line-dk);
+  }
+  .choices{display:grid;gap:.7em}
+  .choice{
+    display:flex;gap:.9em;align-items:flex-start;text-align:left;width:100%;
+    font:inherit;cursor:pointer;background:#fff;color:var(--ink);
+    border:2px solid var(--line-dk);border-radius:14px;padding:1em 1.1em;
+    box-shadow:0 3px 0 var(--line);
+    transition:border-color .15s, background .15s, transform .08s, box-shadow .15s;
+  }
+  .choice:hover{border-color:var(--teal);background:var(--teal-lt)}
+  .choice:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line)}
+  .choice .key{
+    flex:none;width:2em;height:2em;border-radius:9px;display:grid;place-items:center;
+    background:var(--teal);color:#fff;font-family:var(--display);font-size:.9em;
+  }
+  body.meeting .choice .key{width:2.3em;height:2.3em;font-size:1.05em}
+  .choice .cost{display:flex;align-items:center;gap:.35em;font-size:.78em;color:var(--ink-soft);margin-top:.4em;font-weight:700}
+  .choice .cost .icon{width:1.05em;height:1.05em}
+
+  /* ================= consequence / tip / facilitator ================= */
+  .consequence{
+    border:2px solid var(--orange);border-left-width:8px;background:#FDE6DE;
+    border-radius:12px;padding:.85em 1.05em;margin:0 0 1.2em;
+  }
+  .consequence.neutral{border-color:var(--teal);background:var(--teal-lt)}
+  .consequence .kicker{color:var(--orange-dk)}
+  .consequence.neutral .kicker{color:var(--teal-dk)}
+  .consequence p:last-child{margin-bottom:0}
+  .tip{
+    border:2px solid var(--gold);background:var(--gold-lt);border-left-width:8px;
+    border-radius:12px;padding:.95em 1.1em;margin:1.3em 0 0;
+  }
+  .tip .kicker{color:#8A5B0C;display:flex;align-items:center;gap:.45em}
+  .tip .kicker .icon{width:1.3em;height:1.3em}
+  .tip p:last-child{margin-bottom:0}
+  .facilitator{display:none}
+  body.meeting .facilitator{
+    display:block;border:3px dashed var(--teal);border-radius:14px;
+    padding:1em 1.1em;margin-top:1.2em;background:var(--teal-lt);
+  }
+  .facilitator .kicker{color:var(--teal-dk)}
+  .facilitator ul{margin:0;padding-left:1.2em}
+  .facilitator li{margin-bottom:.4em}
+  .facilitator li:last-child{margin-bottom:0}
+
+  /* ================= ending ================= */
+  .outcome-badge{
+    display:inline-flex;align-items:center;gap:.5em;
+    font-size:.76em;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+    border-radius:999px;padding:.45em 1.05em;margin-bottom:.85em;border:2px solid;
+  }
+  .outcome-badge .icon{width:1.25em;height:1.25em}
+  .outcome-badge.good{background:var(--pine-lt);color:var(--pine);border-color:var(--moss)}
+  .outcome-badge.rough{background:var(--gold-lt);color:#7C550D;border-color:var(--gold)}
+  .outcome-badge.bad{background:#FDE6DE;color:var(--orange-dk);border-color:var(--orange)}
+  .light-note{font-size:.87em;color:var(--ink-soft);font-weight:700;margin:-.3em 0 1em;display:flex;align-items:center;gap:.4em}
+  .light-note .icon{width:1.2em;height:1.2em}
+
+  /* ================= trail map ================= */
+  .map-card{margin-top:1.3em;padding-bottom:calc(var(--pad) * .7)}
+  .map-intro{font-size:.93em;color:var(--ink-soft)}
+  .map-frame{
+    position:relative;border:2px solid var(--line-dk);border-radius:14px;overflow:hidden;
+    background:#F3EAD5;margin:.9em 0 0;
+  }
+  .map-frame img.map-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .map-svg{display:block;width:100%;height:auto;position:relative}
+  .pin{cursor:pointer}
+  .pin:focus{outline:none}
+  .pin .hit{fill:transparent}
+  .pin .halo{fill:none;stroke:var(--gold);stroke-width:4;opacity:0}
+  .pin.taken .halo{opacity:1}
+  .pin:hover .halo,.pin:focus .halo,.pin.active .halo{opacity:1;stroke:var(--teal-dk);stroke-width:5}
+  .pin .body-shape{stroke:#fff;stroke-width:3}
+  .pin .num{font-family:var(--display);font-size:19px;fill:#fff;text-anchor:middle;dominant-baseline:central}
+  .pin-label{font-family:var(--body);font-weight:700;font-size:15px;fill:#4A4436}
+  .pin.taken .pin-label{fill:var(--ink);font-weight:900}
+  .edge{fill:none;stroke:#B7A98B;stroke-width:3;stroke-dasharray:2 7;stroke-linecap:round}
+  .edge.taken{stroke:var(--gold);stroke-width:7;stroke-dasharray:none;filter:drop-shadow(0 2px 0 rgba(196,63,27,.25))}
+  .terrain-tree{fill:#8FB894}
+  .terrain-tree.dark{fill:#5E9070}
+  .terrain-trunk{fill:#A6825A}
+  .river{fill:none;stroke:#8FD0DC;stroke-width:16;stroke-linecap:round;opacity:.85}
+  .river-2{fill:none;stroke:#C6E9F0;stroke-width:7;stroke-linecap:round}
+  .ridge{fill:#CFC0A0}
+  .ridge-2{fill:#BCA98A}
+  .map-title{font-family:var(--display);font-size:26px;fill:#8C7B58}
+  .map-sub{font-family:var(--body);font-weight:700;font-size:14px;fill:#A2937A;letter-spacing:.14em}
+  .legend-txt{font-family:var(--body);font-weight:700;font-size:14px;fill:#5C543F}
+  .map-hint{font-size:.83em;color:var(--ink-soft);margin:.7em 0 0;display:flex;align-items:center;gap:.4em;font-weight:600}
+  .map-hint .icon{width:1.15em;height:1.15em}
+
+  .map-detail{
+    margin-top:.9em;border:2px solid var(--line-dk);border-radius:14px;
+    padding:1em 1.1em;background:var(--paper);min-height:8.5em;
+  }
+  .map-detail .md-head{display:flex;align-items:center;gap:.6em;flex-wrap:wrap;margin-bottom:.5em}
+  .map-detail h3{margin:0;font-size:1.15em}
+  .map-detail .md-lesson{font-size:.95em;margin:0 0 .8em}
+  .map-detail .md-empty{color:var(--ink-soft);font-size:.95em;margin:0}
+  .md-tag{
+    font-size:.68em;font-weight:900;letter-spacing:.1em;text-transform:uppercase;
+    border-radius:999px;padding:.3em .8em;border:2px solid;
+  }
+  .md-tag.good{background:var(--pine-lt);color:var(--pine);border-color:var(--moss)}
+  .md-tag.rough{background:var(--gold-lt);color:#7C550D;border-color:var(--gold)}
+  .md-tag.bad{background:#FDE6DE;color:var(--orange-dk);border-color:var(--orange)}
+  .md-tag.step{background:var(--teal-lt);color:var(--teal-dk);border-color:var(--teal)}
+  .md-tag.yours{background:var(--gold);color:#3D2A05;border-color:var(--gold)}
+
+  /* ================= controls / art ================= */
+  .controls{display:flex;gap:.6em;flex-wrap:wrap;margin-top:1.4em}
+  .art{margin:0 0 1.2em}
+  .art img{width:100%;height:auto;display:block;border-radius:12px;border:2px solid var(--line)}
+  .art figcaption{font-size:.78em;color:var(--ink-soft);margin-top:.4em}
+  .art-box{
+    border:3px dashed var(--line-dk);border-radius:12px;
+    background:repeating-linear-gradient(45deg,#FAF3E4,#FAF3E4 12px,#F5ECD9 12px,#F5ECD9 24px);
+    aspect-ratio:16/7;display:grid;place-content:center;text-align:center;gap:.4em;padding:1em;
+  }
+  .art-box .art-label{font-size:.7em;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--teal-dk)}
+  .art-box .art-note{font-size:.86em;color:var(--ink-soft);max-width:34em}
+  .art-box .icon{width:2em;height:2em;color:var(--line-dk);margin:0 auto;stroke-width:1.5}
+</style>
+</head>
+<body>
+
+<!-- ===================== icon sprite ===================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.4"/><path d="M12 2.2v2.4M12 19.4v2.4M2.2 12h2.4M19.4 12h2.4M5.1 5.1l1.7 1.7M17.2 17.2l1.7 1.7M18.9 5.1l-1.7 1.7M6.8 17.2l-1.7 1.7"/></symbol>
+  <symbol id="i-group" viewBox="0 0 24 24"><circle cx="8.5" cy="7.5" r="3"/><circle cx="16.5" cy="8.5" r="2.4"/><path d="M3.5 19.5c0-3 2.2-5 5-5s5 2 5 5M14 19.5c0-2.3 1.2-4 3-4.4"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24"><circle cx="6" cy="8" r="2.6"/><circle cx="18" cy="8" r="2.6"/><path d="M2 20c0-2.6 1.8-4.4 4-4.4S10 17.4 10 20M14 20c0-2.6 1.8-4.4 4-4.4S22 17.4 22 20M12 6v3M12 12.5v3"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3.2s5.6 6.1 5.6 9.8a5.6 5.6 0 1 1-11.2 0C6.4 9.3 12 3.2 12 3.2Z"/></symbol>
+  <symbol id="i-dry" viewBox="0 0 24 24"><path d="M6.5 5.5h11l-1 5.5c-.4 2.2-2.3 3.8-4.5 3.8s-4.1-1.6-4.5-3.8Z"/><path d="M12 14.8v4.4M8.5 19.2h7"/></symbol>
+  <symbol id="i-bandage" viewBox="0 0 24 24"><rect x="2.4" y="8.6" width="19.2" height="6.8" rx="3.4" transform="rotate(-40 12 12)"/><path d="M11 11h.01M13 13h.01M13 10h.01M10 13h.01"/></symbol>
+  <symbol id="i-tent" viewBox="0 0 24 24"><path d="M12 4.5 3 19.5h18Z"/><path d="M12 4.5V19.5M12 11.5l4.2 8M12 11.5l-4.2 8"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 21V3"/><path d="M6 4.2h11.5l-2.4 4 2.4 4H6Z"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 2.8s1.2 3.4 3.4 5.2c2 1.7 3.1 3.4 3.1 5.6a6.5 6.5 0 0 1-13 0c0-3.4 2.6-4.6 3.6-7.2.7 1 1.5 1.7 2.4 2 .2-2.1.3-4 .5-5.6Z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.8"/><path d="M12 7v5.2l3.4 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.8l4.8 4.7L19.5 6.8"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9.4 17.5h5.2M10 20.6h4M12 3.4a5.9 5.9 0 0 1 3.6 10.6v1.5H8.4V14A5.9 5.9 0 0 1 12 3.4Z"/></symbol>
+  <symbol id="i-screen" viewBox="0 0 24 24"><rect x="2.6" y="4" width="18.8" height="12.4" rx="2"/><path d="M12 16.4v3.6M8 20h8"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2.4"/><circle cx="8.8" cy="10" r="1.8"/><path d="M3.6 17.2l4.6-4.3 4 3.6 3.3-2.8 4.5 4"/></symbol>
+  <symbol id="i-tap" viewBox="0 0 24 24"><path d="M9 11V6.2a2.2 2.2 0 0 1 4.4 0v6.3"/><path d="M13.4 10.6a2 2 0 0 1 4 0v.9M17.4 12a2 2 0 0 1 4 0v3.4c0 3.2-2.6 5.8-5.8 5.8h-1.4c-3 0-5.6-2.2-6-5.2l-.6-4.2a2 2 0 0 1 3.9-.8"/></symbol>
+  <symbol id="i-boot" viewBox="0 0 24 24"><path d="M4.5 4.5h4l.6 6.4 6.6 1.9c2.2.6 3.8 2.6 3.8 4.9v1.8H4.5Z"/><path d="M4.5 15.5h14"/></symbol>
+</defs></svg>
+
+<div id="app">
+  <div class="topbar">
+    <span class="brand"><span class="blaze" aria-hidden="true"></span>Lost Patrol</span>
+    <button class="mode-toggle" id="modeToggle" type="button" aria-pressed="false">
+      <svg class="icon" aria-hidden="true"><use href="#i-screen"/></svg>Meeting Mode
+    </button>
+  </div>
+  <main id="stage" aria-live="polite"></main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================================
+     CONFIG
+     ====================================================================== */
+  var SHOW_ART_PLACEHOLDERS = true;   // false hides empty illustration slots
+  var TOTAL_DAYLIGHT = 180;           // minutes of light at the start
+  var MAP_BACKGROUND = null;          // e.g. '/wp-content/uploads/trail-map.jpg'
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+
+  /* =========================================================================
+     STORY GRAPH
+     ====================================================================== */
+  var STORY = {
+
+    start: {
+      mapLabel: 'Lost off-trail — 3 hours of light', pinLabel:'START',
+      kicker: 'The situation',
+      title: 'The Shortcut',
+      art: { slot:'opening-woods', note:'Patrol standing in dense trees, no trail in sight, low afternoon light' },
+      text: [
+        "Your patrol decides to take a shortcut to reach another trail. Everyone leaves the path and walks into the woods for a few miles.",
+        "The other trail never appears. The woods look the same in every direction, and everyone is starting to think the same thing at the same time: we are lost.",
+        "You have two backpacks full of gear and about three hours of daylight."
+      ],
+      prompt: 'What should you do?',
+      choices: [
+        { label:'Go back the way you came. Stay together, and set up camp if it gets dark before you are out.',
+          short:'Backtrack together', to:'p1', time:50 },
+        { label:'Find a place to camp for the night. There is no tent, but you have two brightly colored ponchos.',
+          short:'Make camp', to:'p2', time:30 },
+        { label:'Push forward. If everyone runs, maybe you will find the trail faster.',
+          short:'Run for it', to:'p3', time:70, effects:{ morale:-1 } }
+      ]
+    },
+
+    /* ---------------- PATH 1: backtrack ---------------- */
+    p1: {
+      mapLabel: 'Backtrack together', pinLabel:'Backtrack together',
+      kicker: 'Heading back',
+      title: 'Retracing Your Steps',
+      art: { slot:'backtrack', note:'Patrol hiking single file back through trees, one Scout checking a map' },
+      text: [
+        "You turn around and start back, single file, nobody wandering off. That part everyone gets right.",
+        "The ground slopes down and you hear running water ahead. Nothing looks quite the way you remember it."
+      ],
+      prompt: 'How do you find your way?',
+      choices: [
+        { label:'Slow down. Get out the map and look for landmarks you passed on the way in.',
+          short:'Study the map', to:'end_trail', time:55 },
+        { label:'Cross the river on the rocks. The far bank looks like the way you came.',
+          short:'Cross the river', to:'p1b', time:60 }
+      ]
+    },
+
+    end_trail: {
+      mapLabel: 'Study the map and landmarks', pinLabel:'Found the trail',
+      ending: 'good',
+      kicker: 'Outcome',
+      title: 'You Found the Trail',
+      art: { slot:'found-trail', note:'Scouts stepping back onto a marked trail, relieved' },
+      text: [
+        "One of the Scouts recognizes a split boulder from the hike in. From there the shape of the ridge finally makes sense.",
+        "Twenty minutes later your boots are back on packed dirt, and you are walking toward the troop with light to spare."
+      ],
+      caption: "Watch for landmarks as you hike — they may prove helpful if you choose to backtrack. A map and compass or a cellphone are useful tools, and it is important to know how to use them. But if you are not confident, backtrack early and stay put.",
+      facilitator: [
+        "Name three landmarks from our last hike. Could you find them again?",
+        "How would this have gone if nobody had looked at the map before leaving the trailhead?"
+      ]
+    },
+
+    p1b: {
+      mapLabel: 'Cross the river on slippery rocks', pinLabel:'River crossing',
+      kicker: 'That went badly',
+      consequence: "You step out onto the rocks. They are slick with spray. Two Scouts go down into the water and come up soaked to the skin.",
+      title: 'Wet, and Losing the Light',
+      art: { slot:'river-crossing', note:'Rocky river crossing at dusk, two Scouts soaked on the bank' },
+      text: [
+        "The packs stayed dry, which is lucky. Two of your patrol did not.",
+        "The sun is already behind the ridge and the temperature is dropping with it. You have a little over an hour of usable light and two Scouts in wet clothes."
+      ],
+      caption: "Be careful where you cross a body of water. Keep your shoes on and use a walking stick for balance. If you get wet, change into dry clothes to prevent hypothermia.",
+      effects: { wet:true, morale:-1 },
+      prompt: 'What now?',
+      choices: [
+        { label:'Stop right here. Dry clothes out of the packs, then get a fire going.',
+          short:'Dry clothes and fire', to:'end_fire_night', time:40, effects:{ fire:true, dry:true } },
+        { label:'Keep walking to warm up. Moving is better than sitting still.',
+          short:'Keep walking wet', to:'end_hypothermia', time:70, effects:{ morale:-1 } }
+      ],
+      facilitator: [
+        "What is the first thing you do for someone who just fell in a creek in October?",
+        "Whose job is it to notice that somebody is getting too cold?"
+      ]
+    },
+
+    end_fire_night: {
+      mapLabel: 'Dry clothes and a fire', pinLabel:'Dry clothes and fire',
+      ending: 'rough',
+      kicker: 'Outcome',
+      title: 'A Cold Night, But a Safe One',
+      art: { slot:'night-fire', note:'Small campfire at night, Scouts in dry layers close around it' },
+      text: [
+        "You get the wet Scouts into dry layers before the shivering really sets in, and the fire takes on the third match — with just enough light left to gather wood.",
+        "Nobody sleeps much. But at first light a searcher spots your smoke from the ridge, and it is over."
+      ],
+      caption: "Wet clothes pull heat out of you many times faster than cold air does. Getting dry and getting warm is more urgent than covering more ground.",
+      facilitator: [
+        "What is in your pack right now that would keep you warm if you fell in a creek?",
+        "Why is a fire worth stopping for even when everyone still feels fine?"
+      ]
+    },
+
+    end_hypothermia: {
+      mapLabel: 'Keep walking wet', pinLabel:'Hypothermia',
+      ending: 'bad',
+      kicker: 'Outcome',
+      title: 'Too Cold to Think',
+      art: { slot:'hypothermia', note:'Dark woods, patrol stopped, one Scout wrapped in a jacket' },
+      text: [
+        "Walking does not warm the wet Scouts up. The wind does the opposite.",
+        "Within an hour one of them is shivering hard, fumbling with his pack, and answering questions that do not quite match what was asked. That is early hypothermia, and it is a real emergency. Your patrol has to stop and warm him up right now — in the dark, with no camp set up."
+      ],
+      caption: "Cold, wet, and tired is how a bad afternoon turns into a dangerous night. Learn the early signs of hypothermia: shivering, clumsiness, confusion, and slurred speech. Stop, get dry, get warm, and get help.",
+      facilitator: [
+        "Why does 'keep moving to warm up' sound so reasonable, and when is it wrong?",
+        "How would you tell the difference between a Scout who is cold and a Scout who is in trouble?"
+      ]
+    },
+
+    /* ---------------- PATH 2: make camp ---------------- */
+    p2: {
+      mapLabel: 'Set up camp for the night', pinLabel:'Make camp',
+      kicker: 'Staying put',
+      title: 'Making Camp',
+      art: { slot:'campsite', note:'Flat clearing with deadfall branches, two packs open on the ground' },
+      text: [
+        "You find a flat spot out of the wind with plenty of dead branches nearby.",
+        "No tent. But the packs have two brightly colored ponchos, a full box of matches, food for a day, and a first aid kit. There is still light to work by."
+      ],
+      prompt: 'How does camp come together?',
+      choices: [
+        { label:'Argue it out. Everyone has a different idea about how camp should be set up.',
+          short:'Argue about it', to:'p2a', time:150, effects:{ morale:-2 } },
+        { label:'Split up the jobs. One builds shelter, one hangs the ponchos where they can be seen, others start a fire.',
+          short:'Split up the jobs', to:'end_ponchos', time:120, effects:{ shelter:true, signal:true, fire:true, morale:1 } }
+      ]
+    },
+
+    end_ponchos: {
+      mapLabel: 'Everyone takes a job', pinLabel:'Rescued: ponchos seen',
+      ending: 'good',
+      kicker: 'Outcome',
+      title: 'Found Before Breakfast',
+      art: { slot:'poncho-signal', note:'Bright ponchos tied between two trees above a branch shelter and fire' },
+      text: [
+        "The shelter is not pretty, but it is dry. The fire holds all night.",
+        "The ponchos hang from two branches at the open edge of the clearing — bright orange against all that green. A search team spots them from the ridge the next morning and walks straight to you."
+      ],
+      caption: "Whatever shelter you make, make it visible. Bright-colored items, signal messages, and fires all point people toward you. If you are not confident about backtracking, staying put is your best option.",
+      facilitator: [
+        "What in your pack is the most visible thing from a hundred yards away? From the air?",
+        "Who assigned the jobs in this version? What makes that easier to do before people get scared?"
+      ]
+    },
+
+    p2a: {
+      mapLabel: 'Nobody can agree — arguments begin', pinLabel:'Argument in camp',
+      kicker: 'The light is gone',
+      consequence: "The rest of the daylight disappears into the argument. Nothing gets built, nothing gets hung, and nobody wants to be the one to give in. It gets dark while you are all still talking.",
+      title: 'A Long Night on Cold Ground',
+      art: { slot:'argument', note:'Scouts standing apart in a dim clearing, arms crossed, no camp built' },
+      text: [
+        "You sleep on the ground with no shelter and no fire. Everyone is cold, hungry, and in a foul mood by morning — but everyone is still together, and the packs are still full."
+      ],
+      caption: "It can be challenging to stay cheerful, but many people who have come through survival situations credit staying positive for their success.",
+      effects: { night:true },
+      prompt: 'Morning. What do you do with it?',
+      choices: [
+        { label:'Call it. Assign the jobs yourself, hang the ponchos, get a fire going.',
+          short:'Regroup and assign jobs', to:'end_second_day', time:0, effects:{ shelter:true, signal:true, fire:true, morale:2 } },
+        { label:'Everybody spread out and look for help on your own.',
+          short:'Scatter and search alone', to:'end_scattered', time:0, effects:{ split:true, morale:-1 } }
+      ],
+      facilitator: [
+        "What does an argument actually cost when the sun is going down?",
+        "How do you break a deadlock in your patrol without making it worse?"
+      ]
+    },
+
+    end_second_day: {
+      mapLabel: 'Regroup in the morning', pinLabel:'Regrouped next morning',
+      ending: 'rough',
+      kicker: 'Outcome',
+      title: 'A Rough Night, A Better Morning',
+      art: { slot:'second-day', note:'Morning light, ponchos going up, smoke rising from a new fire' },
+      text: [
+        "Somebody finally says \"let's just do it\" and starts handing out jobs. Ponchos up. Fire lit. Everyone accounted for.",
+        "A search plane spots the smoke that afternoon. You lost a cold, miserable night you did not have to lose — but you are found."
+      ],
+      caption: "Morale is equipment. A patrol that keeps its temper builds shelter, keeps a fire, and gets found. Someone has to be the one who stops the argument and starts the work — that can be you.",
+      facilitator: [
+        "Who in this room would be the one to say \"let's just do it\"? What makes that hard?",
+        "What did the argument cost, in hours and in body heat?"
+      ]
+    },
+
+    end_scattered: {
+      mapLabel: 'Scatter and search alone', pinLabel:'Scattered alone',
+      ending: 'bad',
+      kicker: 'Outcome',
+      title: 'Scattered',
+      art: { slot:'scattered', note:'Empty clearing, single figures disappearing between trees in different directions' },
+      text: [
+        "Six Scouts walk off in six directions into unfamiliar woods. Within twenty minutes nobody can hear anybody else.",
+        "Searchers are no longer looking for one lost patrol. They are looking for six lost Scouts, spread across miles of country."
+      ],
+      caption: "Never split up, and never go off alone. A group is easier to find, safer, and far better at solving problems than any one person.",
+      facilitator: [
+        "Why does splitting up feel so productive, and why is it almost always wrong?",
+        "What is the rule in our troop about leaving the group?"
+      ]
+    },
+
+    /* ---------------- PATH 3: run ---------------- */
+    p3: {
+      mapLabel: 'Run to find the trail faster', pinLabel:'Run for it',
+      kicker: 'Forty-five minutes gone',
+      consequenceTone: 'neutral',
+      consequence: "You break into a run. Branches whip past, packs bang against your backs, and the woods all look the same at speed.",
+      title: 'Running',
+      art: { slot:'running', note:'Scouts running through undergrowth, packs bouncing, motion blur' },
+      text: [
+        "No trail. Just more trees, and less light than you started with. Everyone is breathing hard and nobody is thinking clearly."
+      ],
+      prompt: 'Keep going?',
+      choices: [
+        { label:'Keep pushing at a run. It has to be just ahead.',
+          short:'Keep running', to:'p3a', time:25, effects:{ morale:-1 } },
+        { label:'Slow to a fast hike, same direction, and keep looking.',
+          short:'Hike on, same direction', to:'p3b', time:45 }
+      ]
+    },
+
+    p3a: {
+      mapLabel: 'Keep running — a Scout is injured', pinLabel:'Twisted ankle',
+      kicker: 'Somebody is hurt',
+      consequence: "Ten minutes later a Scout catches a root and goes down hard. His ankle is already swelling. He can walk — barely, and not fast.",
+      title: 'A Twisted Ankle',
+      art: { slot:'twisted-ankle', note:'Scout sitting on the ground holding his ankle, patrol gathered around' },
+      text: [
+        "You have not quite an hour and a half of light left, one Scout who cannot move quickly, and a first aid kit in the bottom of a pack."
+      ],
+      caption: "Taking off without a direction is a very risky decision — you can end up more lost than when you started, and injuries happen when people hurry.",
+      effects: { injured:true, morale:-1 },
+      prompt: 'What do you do with the light you have left?',
+      choices: [
+        { label:'Stop here. Wrap the ankle, get camp up, and hang the ponchos while you can still see.',
+          short:'Stop, treat, and signal', to:'end_recovered', time:45, effects:{ shelter:true, signal:true, fire:true, morale:2 } },
+        { label:'Split up. Some stay with him, the rest go for help.',
+          short:'Split the group', to:'end_split', time:85, effects:{ split:true, morale:-1 } }
+      ],
+      facilitator: [
+        "Running cost you an hour and an ankle. What was the actual hurry?",
+        "What is in your first aid kit for a sprain? Has anyone here used it?"
+      ]
+    },
+
+    end_recovered: {
+      mapLabel: 'Stop, treat the injury, and signal', pinLabel:'Stopped and signaled',
+      ending: 'good',
+      kicker: 'Outcome',
+      title: 'You Got It Back Under Control',
+      art: { slot:'recovered-camp', note:'Wrapped ankle propped up, ponchos hung in the open, fire burning at dusk' },
+      text: [
+        "Somebody finally says STOP, and this time the patrol actually does it. The ankle gets wrapped. The ponchos go up in the open where they will show. A fire is burning before full dark, and nobody is alone.",
+        "Searchers reach you the next morning. You made every mistake available in the first hour — and then you stopped making them."
+      ],
+      caption: "Panicking early does not have to decide how this ends. The moment you stop, think, observe, and plan, you are doing the right thing, even if you spent the first hour doing the wrong one.",
+      facilitator: [
+        "What made it hard to be the person who said stop?",
+        "How much of this scenario could still be fixed after an hour of bad decisions? How much could not?"
+      ]
+    },
+
+    end_split: {
+      mapLabel: 'Split the group', pinLabel:'Split the group',
+      ending: 'bad',
+      kicker: 'Outcome',
+      title: 'Two Lost Groups',
+      art: { slot:'split-group', note:'Two small groups moving apart in fading light' },
+      text: [
+        "Three Scouts stay in the clearing with the twisted ankle. Three head off toward where they think the trail is.",
+        "Within an hour neither group knows where the other one is, and neither one is anywhere searchers are looking. One lost patrol just became two."
+      ],
+      caption: "Splitting up is a bad idea. Now there are multiple groups lost, and rescuers have to find all of them.",
+      facilitator: [
+        "What would have to be true before splitting a group is ever the right call?",
+        "If half the patrol walks away, what happens to the gear? The first aid kit? The matches?"
+      ]
+    },
+
+    p3b: {
+      mapLabel: 'Hike deeper into the woods', pinLabel:'Deeper into woods',
+      kicker: 'Deeper in',
+      consequence: "You cannot find the trail. The woods get thicker, the ground gets steeper, and you no longer have any idea which direction you came from.",
+      title: 'Deeper Into the Woods',
+      art: { slot:'deeper-woods', note:'Steep, dense forest, long shadows, no path anywhere' },
+      text: [
+        "Maybe an hour of light left. Two full packs. Everyone still together, and everyone still uninjured. That is more than a lot of people have."
+      ],
+      caption: "Taking off without direction is a very risky decision. You could find yourself even more lost.",
+      prompt: 'Last of the light. Spend it how?',
+      choices: [
+        { label:'Stop. Take stock of the packs and set up a camp you can be seen from while there is light.',
+          short:'Stop and set up camp', to:'end_recovered_late', time:25, effects:{ shelter:true, signal:true, fire:true, morale:1 } },
+        { label:'Keep going. The trail has to be close.',
+          short:'Keep going in the dark', to:'end_dark', time:65, effects:{ morale:-2 } }
+      ],
+      facilitator: [
+        "How do you know when you have gone from 'turned around' to 'lost'?",
+        "What is the last useful thing you can do with forty minutes of daylight?"
+      ]
+    },
+
+    end_recovered_late: {
+      mapLabel: 'Stop and set up while there is light', pinLabel:'Camped while light',
+      ending: 'good',
+      kicker: 'Outcome',
+      title: 'Still Time to Do It Right',
+      art: { slot:'late-camp', note:'Branch shelter and hung ponchos in the last of the daylight' },
+      text: [
+        "You burned two hours going the wrong way. You cannot get those back.",
+        "What you still have is light, two packs, and a patrol that is together. Ponchos up. Shelter built. Fire lit. That is all rescuers need, and they find you in the morning."
+      ],
+      caption: "You cannot get back the time you spent hurrying, but you can stop spending it. Set up while you still have light — everything is harder in the dark.",
+      facilitator: [
+        "What is the difference between the last forty minutes of light and the first forty minutes of dark?",
+        "Why is it hard to stop after you have already invested two hours in being wrong?"
+      ]
+    },
+
+    end_dark: {
+      mapLabel: 'Keep going in the dark', pinLabel:'Lost in the dark',
+      ending: 'bad',
+      kicker: 'Outcome',
+      title: 'Deep and Dark',
+      art: { slot:'lost-dark', note:'Near-black forest, one small flashlight beam on tangled ground' },
+      text: [
+        "The light goes and you are still walking. No trail, no landmarks, no idea which way is out — and now you cannot see the ground under your feet.",
+        "You are miles from anywhere anyone is searching, with no shelter and no fire, and every step is taking you farther away."
+      ],
+      caption: "Every minute you spend moving without a plan takes you farther from where searchers will look. When you realize you are lost, the ground you are standing on is usually the best place to stop.",
+      facilitator: [
+        "Where do search teams start looking? How far can a running patrol get from that spot?",
+        "What was the last moment in this story where a good decision was still easy?"
+      ]
+    }
+  };
+
+  var ROOT = 'start';
+  var LETTERS = ['A','B','C','D'];
+
+  var STOP_STEPS = [
+    { letter:'S', word:'Stop',    text:'Stop moving. Sit down. The first thing to get under control is your own panic.' },
+    { letter:'T', word:'Think',   text:'Think before you act. How much daylight is left? What is in the packs? Who is with you?' },
+    { letter:'O', word:'Observe', text:'Observe. Landmarks, water, terrain, weather — and how everyone is holding up.' },
+    { letter:'P', word:'Plan',    text:'Plan out loud, together. Then do it while you still have light.' }
+  ];
+
+  /* =========================================================================
+     STATE
+     ====================================================================== */
+  var state = null;
+  var undoStack = [];
+  var selectedPin = null;
+
+  function freshState(){
+    return {
+      node: ROOT,
+      daylight: TOTAL_DAYLIGHT,
+      trail: [],
+      visited: [ROOT],
+      cond: { split:false, wet:false, injured:false, fire:false, shelter:false, signal:false, night:false, morale:0 }
+    };
+  }
+  function snapshot(){ return JSON.stringify(state); }
+  function restore(str){ state = JSON.parse(str); }
+
+  /* =========================================================================
+     DOM HELPERS
+     ====================================================================== */
+  var stage = document.getElementById('stage');
+
+  function el(tag, cls, txt){
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt !== undefined && txt !== null) n.textContent = txt;
+    return n;
+  }
+  function icon(id, cls){
+    var s = document.createElementNS(SVGNS,'svg');
+    s.setAttribute('class', 'icon' + (cls ? ' ' + cls : ''));
+    s.setAttribute('aria-hidden','true');
+    s.setAttribute('focusable','false');
+    var u = document.createElementNS(SVGNS,'use');
+    u.setAttribute('href','#' + id);
+    s.appendChild(u);
+    return s;
+  }
+  function sv(tag, attrs){
+    var n = document.createElementNS(SVGNS, tag);
+    if (attrs) Object.keys(attrs).forEach(function(k){ n.setAttribute(k, attrs[k]); });
+    return n;
+  }
+  function svText(x, y, str, cls, anchor){
+    var t = sv('text', { x:x, y:y, class:cls });
+    if (anchor) t.setAttribute('text-anchor', anchor);
+    t.textContent = str;
+    return t;
+  }
+  function formatTime(mins){
+    if (mins <= 0) return 'None';
+    var h = Math.floor(mins/60), m = mins % 60;
+    if (h && m) return h + 'h ' + m + 'm';
+    if (h) return h + 'h';
+    return m + 'm';
+  }
+  function paragraphs(arr){
+    var wrap = el('div','body');
+    (arr || []).forEach(function(p){ wrap.appendChild(el('p', null, p)); });
+    return wrap;
+  }
+  function artBlock(art){
+    if (!art) return null;
+    var fig = el('figure','art');
+    if (art.src){
+      var img = document.createElement('img');
+      img.src = art.src;
+      img.alt = art.alt || '';
+      fig.appendChild(img);
+      if (art.credit) fig.appendChild(el('figcaption', null, art.credit));
+      return fig;
+    }
+    if (!SHOW_ART_PLACEHOLDERS) return null;
+    var box = el('div','art-box');
+    box.setAttribute('data-slot', art.slot || '');
+    box.appendChild(icon('i-image'));
+    box.appendChild(el('span','art-label','Illustration slot: ' + (art.slot || 'unnamed')));
+    if (art.note) box.appendChild(el('span','art-note', art.note));
+    fig.appendChild(box);
+    return fig;
+  }
+  function applyEffects(fx){
+    if (!fx) return;
+    Object.keys(fx).forEach(function(k){
+      if (k === 'morale'){ state.cond.morale += fx[k]; return; }
+      if (k === 'dry'){ state.cond.wet = false; return; }
+      state.cond[k] = fx[k];
+    });
+  }
+
+  /* =========================================================================
+     GRAPH UTILITIES
+     ====================================================================== */
+  var PARENT = {};   // childId -> {id, choice}
+  var DEPTH  = {};
+  (function indexGraph(){
+    (function walk(id, depth){
+      DEPTH[id] = depth;
+      (STORY[id].choices || []).forEach(function(c){
+        PARENT[c.to] = { id:id, choice:c };
+        walk(c.to, depth + 1);
+      });
+    })(ROOT, 0);
+  })();
+
+  function routeTo(id){                    // list of choices from ROOT to id
+    var chain = [], cur = id;
+    while (PARENT[cur]){ chain.unshift(PARENT[cur].choice); cur = PARENT[cur].id; }
+    return chain;
+  }
+  function playTo(id){                     // rebuild state by replaying choices
+    state = freshState();
+    undoStack = [];
+    routeTo(id).forEach(function(ch){ applyChoice(ch); });
+  }
+  function applyChoice(ch){
+    undoStack.push(snapshot());
+    state.trail.push(ch.short || ch.label);
+    state.daylight = Math.max(0, state.daylight - (ch.time || 0));
+    applyEffects(ch.effects);
+    state.node = ch.to;
+    var node = STORY[state.node];
+    if (node.time !== undefined) state.daylight = Math.max(0, state.daylight - node.time);
+    applyEffects(node.effects);
+    if (state.visited.indexOf(state.node) === -1) state.visited.push(state.node);
+  }
+
+  /* =========================================================================
+     STATUS PANEL
+     ====================================================================== */
+  function tile(opts){
+    var t = el('div','tile tile-' + opts.key + ' ' + (opts.tone || 'off'));
+    var block = el('div','t-block');
+    block.appendChild(el('span','t-label', opts.label));
+    var row = el('div','t-row');
+    if (opts.icon) [].concat(opts.icon).forEach(function(i){ row.appendChild(icon(i)); });
+    if (opts.custom) row.appendChild(opts.custom);
+    row.appendChild(el('span','t-value', opts.value));
+    block.appendChild(row);
+    t.appendChild(block);
+    if (opts.extra) t.appendChild(opts.extra);
+    return t;
+  }
+
+  function sunArc(){
+    var frac = Math.max(0, Math.min(1, state.daylight / TOTAL_DAYLIGHT));
+    var dark = state.daylight <= 0 || state.cond.night;
+    var t = dark ? 1 : (1 - frac);
+    var deg = 30 + t * 150, rad = deg * Math.PI / 180;
+    var cx = 60, cy = 54, r = 42;
+    var sx = cx - r * Math.cos(rad), sy = cy - r * Math.sin(rad);
+
+    var svg = sv('svg', { class:'sunarc', viewBox:'0 0 120 60', role:'img' });
+    svg.appendChild(sv('title', {})).textContent = dark ? 'The sun has set' : formatTime(state.daylight) + ' of daylight left';
+
+    var grad = sv('linearGradient', { id:'skyGrad', x1:'0', y1:'0', x2:'0', y2:'1' });
+    var stops = dark ? ['#20304F','#3D4E70']
+              : t < .34 ? ['#8FD3E8','#CFEAF2']
+              : t < .7  ? ['#9FC6DE','#F6D9A6']
+              :           ['#D98A57','#F3C489'];
+    grad.appendChild(sv('stop', { offset:'0%', 'stop-color':stops[0] }));
+    grad.appendChild(sv('stop', { offset:'100%', 'stop-color':stops[1] }));
+    var defs = sv('defs'); defs.appendChild(grad); svg.appendChild(defs);
+
+    svg.appendChild(sv('rect', { x:0, y:0, width:120, height:60, fill:'url(#skyGrad)' }));
+    svg.appendChild(sv('path', {
+      d:'M ' + (cx - r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 1 ' + (cx + r) + ' ' + cy,
+      fill:'none', stroke:'rgba(255,255,255,.55)', 'stroke-width':1.5, 'stroke-dasharray':'3 4'
+    }));
+    if (!dark){
+      svg.appendChild(sv('circle', { cx:sx, cy:sy, r:12, fill:'rgba(255,220,130,.35)' }));
+      svg.appendChild(sv('circle', { cx:sx, cy:sy, r:7, fill:'#FFD65C', stroke:'#E8952A', 'stroke-width':1.5 }));
+    } else {
+      svg.appendChild(sv('circle', { cx:96, cy:20, r:5.5, fill:'#EFEAD8' }));
+      svg.appendChild(sv('circle', { cx:93, cy:18, r:5.5, fill:'#20304F' }));
+    }
+    svg.appendChild(sv('path', { d:'M0 54 H120 V60 H0 Z', fill:'#3E5741' }));
+    svg.appendChild(sv('path', {
+      d:'M6 54 l7-13 7 13 Z M22 54 l6-10 6 10 Z M98 54 l7-12 7 12 Z',
+      fill:'#2F4633'
+    }));
+    return svg;
+  }
+
+  function statusPanel(){
+    var wrap = el('section','status');
+    wrap.setAttribute('aria-label','Patrol status');
+    var grid = el('div','status-grid');
+    var c = state.cond;
+    var dark = state.daylight <= 0 || c.night;
+    var isEnd = !!STORY[state.node].ending;
+
+    grid.appendChild(tile({
+      key:'day', label: isEnd ? (dark ? 'Ran out of light' : 'Light left when you stopped') : (dark ? 'After dark' : 'Daylight left'),
+      value: dark ? 'Dark' : formatTime(state.daylight),
+      icon:'i-sun', tone: dark ? 'alert' : state.daylight <= 45 ? 'warn' : 'on',
+      extra: sunArc()
+    }));
+
+    var who = [c.split ? 'Split up' : 'Together'];
+    if (c.injured) who.push('1 hurt');
+    grid.appendChild(tile({
+      key:'group', label:'Patrol', value: who.join(', '),
+      icon: c.injured ? [c.split ? 'i-split' : 'i-group', 'i-bandage'] : (c.split ? 'i-split' : 'i-group'),
+      tone: (c.split || c.injured) ? 'alert' : 'on'
+    }));
+
+    grid.appendChild(tile({
+      key:'warmth', label:'Clothing', value: c.wet ? 'Soaked' : 'Dry',
+      icon: c.wet ? 'i-drop' : 'i-dry', tone: c.wet ? 'alert' : 'on'
+    }));
+
+    var m = c.morale;
+    var lvl = m >= 1 ? 4 : m === 0 ? 3 : m >= -2 ? 2 : 1;
+    var bars = el('div','morale-bars');
+    for (var i = 1; i <= 4; i++) bars.appendChild(el('span', i <= lvl ? 'lit' : null));
+    grid.appendChild(tile({
+      key:'morale', label:'Morale',
+      value: lvl === 4 ? 'Strong' : lvl === 3 ? 'Holding' : lvl === 2 ? 'Strained' : 'Low',
+      custom: bars, tone: lvl >= 3 ? 'on' : lvl === 2 ? 'warn' : 'alert'
+    }));
+
+    grid.appendChild(tile({
+      key:'shelter', label:'Shelter', value: c.shelter ? 'Built' : 'None',
+      icon:'i-tent', tone: c.shelter ? 'on' : 'off'
+    }));
+    grid.appendChild(tile({
+      key:'signal', label:'Signal', value: c.signal ? 'Ponchos up' : 'None',
+      icon:'i-flag', tone: c.signal ? 'on' : 'off'
+    }));
+    grid.appendChild(tile({
+      key:'fire', label:'Fire', value: c.fire ? 'Burning' : 'None',
+      icon:'i-flame', tone: c.fire ? 'on' : 'off'
+    }));
+
+    wrap.appendChild(grid);
+    return wrap;
+  }
+
+  function breadcrumbBlock(){
+    if (!state.trail.length) return null;
+    var wrap = el('nav','breadcrumb');
+    wrap.setAttribute('aria-label','Decisions so far');
+    var ol = el('ol');
+    state.trail.forEach(function(t){ ol.appendChild(el('li', null, t)); });
+    wrap.appendChild(ol);
+    return wrap;
+  }
+
+  /* =========================================================================
+     SCREEN: STOP
+     ====================================================================== */
+  function stopSign(){
+    var svg = sv('svg', { class:'stop-sign', viewBox:'0 0 200 200', role:'img' });
+    svg.appendChild(sv('title', {})).textContent = 'A red octagonal stop sign reading STOP';
+    var pts = [];
+    for (var i = 0; i < 8; i++){
+      var a = (Math.PI / 4) * i + Math.PI / 8;
+      pts.push((100 + 96 * Math.cos(a)).toFixed(1) + ',' + (100 + 96 * Math.sin(a)).toFixed(1));
+    }
+    svg.appendChild(sv('polygon', { points:pts.join(' '), fill:'#C4231B' }));
+    var inner = [];
+    for (var j = 0; j < 8; j++){
+      var b = (Math.PI / 4) * j + Math.PI / 8;
+      inner.push((100 + 82 * Math.cos(b)).toFixed(1) + ',' + (100 + 82 * Math.sin(b)).toFixed(1));
+    }
+    svg.appendChild(sv('polygon', { points:inner.join(' '), fill:'none', stroke:'#fff', 'stroke-width':7 }));
+    var t = sv('text', { x:100, y:118, 'text-anchor':'middle',
+      fill:'#fff', 'font-family':'var(--display)', 'font-size':'46',
+      textLength:'116', lengthAdjust:'spacingAndGlyphs' });
+    t.textContent = 'STOP';
+    svg.appendChild(t);
+    return svg;
+  }
+
+  function renderStop(){
+    stage.innerHTML = '';
+    var card = el('section','card scene');
+
+    card.appendChild(el('p','kicker','Before you decide anything'));
+    card.appendChild(el('h1', null, 'When you realize you are lost, STOP.'));
+
+    var hero = el('div','stop-hero');
+
+    var left = el('div','sign-wrap');
+    left.appendChild(stopSign());
+    left.appendChild(el('p','sign-caption','Treat it like the sign. You do not roll through it — you come to a full stop first.'));
+    hero.appendChild(left);
+
+    var right = el('div');
+    var art = artBlock({ slot:'stop-hero', note:'Patrol halted mid-stride in the woods, one Scout raising a hand to stop the others' });
+    if (art) right.appendChild(art);
+    right.appendChild(el('p', null,
+      'Many people panic at the first sign that something has gone wrong, and frantic decisions lead down disastrous paths. Four steps, in this order:'));
+    hero.appendChild(right);
+
+    card.appendChild(hero);
+
+    var ul = el('ul','stop-steps');
+    STOP_STEPS.forEach(function(s){
+      var li = el('li','stop-step');
+      li.appendChild(el('span','glyph', s.letter));
+      var txt = el('div');
+      txt.appendChild(el('strong','word', s.word));
+      txt.appendChild(el('span','say', s.text));
+      li.appendChild(txt);
+      ul.appendChild(li);
+    });
+    card.appendChild(ul);
+
+    var go = el('button','btn btn-primary','Start the scenario');
+    go.type = 'button';
+    go.style.marginTop = '1.4em';
+    go.addEventListener('click', function(){
+      state = freshState(); undoStack = []; render();
+    });
+    card.appendChild(go);
+
+    stage.appendChild(card);
+    afterPaint(go);
+  }
+
+  /* =========================================================================
+     SCREEN: STORY / ENDING
+     ====================================================================== */
+  function render(){
+    var node = STORY[state.node];
+    stage.innerHTML = '';
+    selectedPin = null;
+
+    var bc = breadcrumbBlock();
+    if (bc) stage.appendChild(bc);
+    stage.appendChild(statusPanel());
+
+    var card = el('section','card scene');
+
+    if (node.ending){
+      var tone = node.ending;
+      var badge = el('div','outcome-badge ' + tone);
+      badge.appendChild(icon(tone === 'bad' ? 'i-x' : 'i-check'));
+      badge.appendChild(document.createTextNode(
+        tone === 'good' ? 'Everyone gets home' : tone === 'rough' ? 'You make it — the hard way' : 'This goes wrong'));
+      card.appendChild(badge);
+
+      var note = el('p','light-note');
+      note.appendChild(icon('i-clock'));
+      note.appendChild(document.createTextNode(state.daylight > 0
+        ? 'You still had ' + formatTime(state.daylight) + ' of daylight when you stopped moving and started working.'
+        : 'You were still moving when the light ran out.'));
+      card.appendChild(note);
+    } else if (node.kicker){
+      card.appendChild(el('p','kicker', node.kicker));
+    }
+
+    if (node.consequence){
+      var cq = el('div','consequence' + (node.consequenceTone === 'neutral' ? ' neutral' : ''));
+      cq.appendChild(el('p','kicker','What just happened'));
+      cq.appendChild(el('p', null, node.consequence));
+      card.appendChild(cq);
+    }
+
+    card.appendChild(el('h2', null, node.title));
+
+    var art = artBlock(node.art);
+    if (art) card.appendChild(art);
+
+    card.appendChild(paragraphs(node.text));
+
+    if (node.choices && node.choices.length){
+      card.appendChild(el('p','prompt', node.prompt || 'What do you do?'));
+      var list = el('div','choices');
+      node.choices.forEach(function(ch, i){
+        var b = el('button','choice');
+        b.type = 'button';
+        b.appendChild(el('span','key', LETTERS[i]));
+        var txt = el('span');
+        txt.appendChild(document.createTextNode(ch.label));
+        if (ch.time){
+          var cost = el('span','cost');
+          cost.appendChild(icon('i-clock'));
+          cost.appendChild(document.createTextNode('About ' + formatTime(ch.time) + ' of daylight'));
+          txt.appendChild(cost);
+        }
+        b.appendChild(txt);
+        b.addEventListener('click', function(){ applyChoice(ch); render(); });
+        list.appendChild(b);
+      });
+      card.appendChild(list);
+    }
+
+    if (node.caption){
+      var tip = el('div','tip');
+      var k = el('p','kicker');
+      k.appendChild(icon('i-bulb'));
+      k.appendChild(document.createTextNode(node.ending ? 'Survival tip' : 'Remember this'));
+      tip.appendChild(k);
+      tip.appendChild(el('p', null, node.caption));
+      card.appendChild(tip);
+    }
+
+    if (node.facilitator && node.facilitator.length){
+      var f = el('div','facilitator');
+      f.appendChild(el('p','kicker','Talk it over'));
+      var ul = el('ul');
+      node.facilitator.forEach(function(q){ ul.appendChild(el('li', null, q)); });
+      f.appendChild(ul);
+      card.appendChild(f);
+    }
+
+    stage.appendChild(card);
+    if (node.ending) stage.appendChild(mapCard());
+    stage.appendChild(controlsBlock(!!node.ending));
+    afterPaint(card.querySelector('.choice') || card);
+  }
+
+  function controlsBlock(isEnding){
+    var wrap = el('div','controls');
+    if (undoStack.length){
+      var back = el('button','btn btn-ghost', isEnding ? 'Back up one decision and try again' : 'Back up one decision');
+      back.type = 'button';
+      back.addEventListener('click', function(){ restore(undoStack.pop()); render(); });
+      wrap.appendChild(back);
+    }
+    var again = el('button','btn ' + (isEnding ? 'btn-primary' : 'btn-ghost'), 'Start over');
+    again.type = 'button';
+    again.addEventListener('click', function(){ undoStack = []; renderStop(); });
+    wrap.appendChild(again);
+    return wrap;
+  }
+
+  /* =========================================================================
+     TRAIL MAP
+     ====================================================================== */
+  var MAP_W = 1060, MAP_H = 700;
+  var COL_X = [95, 300, 520, 700];
+  var ROW_TOP = 116, ROW_H = 56;
+
+  function mapLayout(){
+    var pos = {}, leafN = 0;
+    (function assign(id){
+      var n = STORY[id];
+      if (!n.choices){ pos[id] = { row:leafN++ }; return; }
+      n.choices.forEach(function(c){ assign(c.to); });
+      var rows = n.choices.map(function(c){ return pos[c.to].row; });
+      pos[id] = { row: rows.reduce(function(a,b){ return a+b; }, 0) / rows.length };
+    })(ROOT);
+
+    Object.keys(pos).forEach(function(id){
+      var jitter = ((id.length * 37 + id.charCodeAt(0) * 11) % 17) - 8;
+      pos[id].x = COL_X[DEPTH[id]];
+      pos[id].y = ROW_TOP + pos[id].row * ROW_H + jitter * 0.7;
+    });
+    return pos;
+  }
+
+  function treeGlyph(x, y, s, dark){
+    var g = sv('g');
+    g.appendChild(sv('rect', { x:x-1.4*s, y:y, width:2.8*s, height:4.5*s, rx:1, class:'terrain-trunk' }));
+    g.appendChild(sv('path', {
+      d:'M'+x+' '+(y-16*s)+' L'+(x+9*s)+' '+(y-2*s)+' L'+(x-9*s)+' '+(y-2*s)+' Z',
+      class:'terrain-tree' + (dark ? ' dark' : '')
+    }));
+    g.appendChild(sv('path', {
+      d:'M'+x+' '+(y-22*s)+' L'+(x+7*s)+' '+(y-10*s)+' L'+(x-7*s)+' '+(y-10*s)+' Z',
+      class:'terrain-tree' + (dark ? ' dark' : '')
+    }));
+    return g;
+  }
+
+  /* Keep-out geometry so the forest never grows on top of the trail,
+     the pins, the labels or the map furniture. */
+  function collides(x, y, keep){
+    for (var i = 0; i < keep.circles.length; i++){
+      var c = keep.circles[i];
+      if ((x-c.x)*(x-c.x) + (y-c.y)*(y-c.y) < c.r*c.r) return true;
+    }
+    for (var j = 0; j < keep.rects.length; j++){
+      var r = keep.rects[j];
+      if (x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1) return true;
+    }
+    return false;
+  }
+
+  function textKeepOut(keep, x, y, str, anchor, size){
+    var w = str.length * (size || 8.4);
+    var x0 = anchor === 'middle' ? x - w/2 : x;
+    for (var t = 0; t <= w + 8; t += 13) keep.circles.push({ x:x0 + t, y:y - 5, r:19 });
+  }
+
+  function bezierKeepOut(keep, a, b){
+    var mx = (a.x + b.x) / 2;
+    for (var i = 0; i <= 22; i++){
+      var t = i / 22, u = 1 - t;
+      var x = u*u*u*a.x + 3*u*u*t*mx + 3*u*t*t*mx + t*t*t*b.x;
+      var y = u*u*u*a.y + 3*u*u*t*a.y + 3*u*t*t*b.y + t*t*t*b.y;
+      keep.circles.push({ x:x, y:y, r:27 });
+    }
+  }
+
+  function forestLayer(keep){
+    var g = sv('g', { 'aria-hidden':'true' });
+    var step = 58, n = 0;
+    for (var gx = 24; gx < MAP_W - 10; gx += step){
+      for (var gy = 40; gy < MAP_H - 14; gy += step){
+        n++;
+        var h = (n * 2654435761) % 1000;                 // deterministic pseudo-random
+        if (h % 100 < 34) continue;                      // thin the grid out
+        var x = gx + ((h % 37) - 18);
+        var y = gy + ((h % 29) - 14);
+        if (x < 16 || x > MAP_W - 16 || y < 34 || y > MAP_H - 10) continue;
+        // test the trunk and the canopy above it, so branches never cover a label
+        if (collides(x, y, keep) || collides(x, y - 16, keep)) continue;
+        g.appendChild(treeGlyph(x, y, 0.72 + (h % 45) / 100, h % 2));
+      }
+    }
+    return g;
+  }
+
+  function terrainLayer(pos, keep){
+    var g = sv('g', { 'aria-hidden':'true' });
+
+    g.appendChild(sv('rect', { x:0, y:0, width:MAP_W, height:MAP_H, fill:'#F3EAD5' }));
+    g.appendChild(sv('path', {
+      d:'M0 '+MAP_H+' V596 q170 -44 340 -16 t330 -6 390 -34 V'+MAP_H+' Z', fill:'#EADFC2' }));
+
+    // distant ridge line across the top
+    g.appendChild(sv('path', {
+      d:'M-10 98 L64 54 L136 84 L214 36 L296 78 L368 46 L446 88 L524 40 L602 82 ' +
+        'L682 26 L762 76 L842 32 L920 80 L1000 42 L1070 86 L1070 -10 L-10 -10 Z',
+      class:'ridge' }));
+    g.appendChild(sv('path', { d:'M682 26 L720 62 L644 62 Z M842 32 L878 66 L806 66 Z M214 36 L250 70 L178 70 Z', class:'ridge-2' }));
+
+    // the river runs through the river-crossing pin, then out of frame
+    var rp = pos['p1b'] || { x:520, y:172 };
+    var d = 'M-12 ' + (rp.y - 46) + ' q140 -30 268 10 T' + rp.x + ' ' + rp.y +
+            ' q130 28 240 -12 T' + (MAP_W + 40) + ' ' + (rp.y - 26);
+    g.appendChild(sv('path', { d:d, class:'river' }));
+    g.appendChild(sv('path', { d:d, class:'river-2' }));
+
+    return g;
+  }
+
+  function furnitureLayer(){
+    var g = sv('g', { 'aria-hidden':'true' });
+
+    // title block
+    g.appendChild(sv('rect', { x:34, y:18, width:436, height:60, rx:12,
+      fill:'rgba(255,253,247,.82)', stroke:'#CFC0A0', 'stroke-width':2 }));
+    g.appendChild(svText(52, 46, 'THE WOODS', 'map-title'));
+    g.appendChild(svText(54, 66, 'EVERY PATH YOU COULD HAVE TAKEN', 'map-sub'));
+
+    // compass, lower right
+    var cx = 982, cy = 626;
+    g.appendChild(sv('circle', { cx:cx, cy:cy, r:30, fill:'rgba(255,253,247,.86)',
+      stroke:'#BCA98A', 'stroke-width':2 }));
+    g.appendChild(sv('path', { d:'M'+cx+' '+(cy-22)+' L'+(cx+8)+' '+cy+' L'+cx+' '+(cy-6)+' L'+(cx-8)+' '+cy+' Z', fill:'#C4231B' }));
+    g.appendChild(sv('path', { d:'M'+cx+' '+(cy+22)+' L'+(cx-8)+' '+cy+' L'+cx+' '+(cy+6)+' L'+(cx+8)+' '+cy+' Z', fill:'#8C7B58' }));
+    g.appendChild(svText(cx, cy - 34, 'N', 'legend-txt', 'middle'));
+
+    // legend strip along the bottom
+    var y = 668;
+    g.appendChild(sv('rect', { x:34, y:y-28, width:706, height:52, rx:12,
+      fill:'rgba(255,253,247,.9)', stroke:'#BCA98A', 'stroke-width':2 }));
+    g.appendChild(sv('path', { d:'M50 '+y+' h44', stroke:'#F2A93B', 'stroke-width':7, 'stroke-linecap':'round' }));
+    g.appendChild(svText(104, y+5, 'the route you took', 'legend-txt'));
+    g.appendChild(sv('path', { d:'M254 '+y+' h44', stroke:'#B7A98B', 'stroke-width':3,
+      'stroke-dasharray':'2 7', 'stroke-linecap':'round' }));
+    g.appendChild(svText(308, y+5, 'paths not taken', 'legend-txt'));
+    [['#4C8A5B','safe',452],['#F2A93B','rough',532],['#E8552A','goes wrong',616]].forEach(function(it){
+      g.appendChild(sv('circle', { cx:it[2], cy:y-4, r:9, fill:it[0], stroke:'#fff', 'stroke-width':2.5 }));
+      g.appendChild(svText(it[2]+14, y+1, it[1], 'legend-txt'));
+    });
+    return g;
+  }
+
+  function wrapWords(str, max){
+    var words = String(str).split(' '), lines = [], cur = '';
+    words.forEach(function(w){
+      if (!cur.length) cur = w;
+      else if ((cur + ' ' + w).length <= max) cur += ' ' + w;
+      else { lines.push(cur); cur = w; }
+    });
+    if (cur.length) lines.push(cur);
+    return lines.slice(0, 2);
+  }
+
+  function endingColor(kind){
+    return kind === 'good' ? '#4C8A5B' : kind === 'rough' ? '#F2A93B' : '#E8552A';
+  }
+
+  function mapCard(){
+    var card = el('section','card map-card');
+    card.appendChild(el('p','kicker','The whole trail map'));
+    card.appendChild(el('h2', null, 'Where every choice led'));
+    card.appendChild(el('p','map-intro',
+      'Now that you are out of the woods, here is the country you were walking through. Your route is the gold trail. Everything faint is a path you did not take.'));
+
+    var frame = el('div','map-frame');
+    if (MAP_BACKGROUND){
+      var bg = document.createElement('img');
+      bg.className = 'map-bg'; bg.src = MAP_BACKGROUND; bg.alt = '';
+      frame.appendChild(bg);
+    }
+
+    var svg = sv('svg', { class:'map-svg', viewBox:'0 0 ' + MAP_W + ' ' + MAP_H, role:'group' });
+    svg.setAttribute('aria-label','Trail map of every decision path in the scenario');
+
+    var pos = mapLayout();
+
+    var stepNo = 0, numbers = {};
+    (function number(id){
+      if (!STORY[id].ending) numbers[id] = ++stepNo;
+      (STORY[id].choices || []).forEach(function(c){ number(c.to); });
+    })(ROOT);
+
+    /* ---- measure everything before drawing, so the forest can dodge it ---- */
+    var keep = { circles:[], rects:[] };
+    var labels = [];
+    var ids = Object.keys(STORY);
+
+    ids.forEach(function(id){
+      var n = STORY[id], p = pos[id], isEnd = !!n.ending;
+      var r = isEnd ? 15 : 17;
+      keep.circles.push({ x:p.x, y:p.y, r:r + 22 });
+
+      var lines = wrapWords(n.pinLabel, isEnd ? 16 : 17);
+      lines.forEach(function(ln, i){
+        var anchor = isEnd ? 'start' : 'middle';
+        var tx = isEnd ? p.x + r + 11 : p.x;
+        var ty = isEnd ? p.y + 5 - (lines.length - 1) * 8 + i * 17 : p.y + r + 19 + i * 16;
+        labels.push({ id:id, x:tx, y:ty, str:ln, anchor:anchor });
+        textKeepOut(keep, tx, ty, ln, anchor, 8.4);
+      });
+    });
+
+    ids.forEach(function(id){
+      (STORY[id].choices || []).forEach(function(c){ bezierKeepOut(keep, pos[id], pos[c.to]); });
+    });
+
+    keep.rects.push({ x0:20, y0:6, x1:486, y1:92 });        // title block
+    keep.rects.push({ x0:20, y0:626, x1:756, y1:MAP_H });   // legend strip
+    keep.rects.push({ x0:938, y0:582, x1:1032, y1:674 });   // compass
+    keep.rects.push({ x0:0, y0:0, x1:MAP_W, y1:102 });      // ridge
+
+    /* ---- draw ---- */
+    if (!MAP_BACKGROUND){
+      svg.appendChild(terrainLayer(pos, keep));
+      svg.appendChild(forestLayer(keep));
+    }
+
+    var edges = sv('g');
+    ids.forEach(function(id){
+      (STORY[id].choices || []).forEach(function(c){
+        var a = pos[id], b = pos[c.to];
+        var taken = state.visited.indexOf(id) !== -1 && state.visited.indexOf(c.to) !== -1;
+        var mx = (a.x + b.x) / 2;
+        edges.appendChild(sv('path', {
+          d:'M' + a.x + ' ' + a.y + ' C ' + mx + ' ' + a.y + ', ' + mx + ' ' + b.y + ', ' + b.x + ' ' + b.y,
+          class:'edge' + (taken ? ' taken' : '')
+        }));
+      });
+    });
+    svg.appendChild(edges);
+
+    if (!MAP_BACKGROUND) svg.appendChild(furnitureLayer());
+
+    var labelLayer = sv('g', { 'aria-hidden':'true' });
+    labels.forEach(function(L){
+      var taken = state.visited.indexOf(L.id) !== -1;
+      var halo = svText(L.x, L.y, L.str, 'pin-label', L.anchor);
+      halo.setAttribute('stroke', '#F6EEDC');
+      halo.setAttribute('stroke-width', '4.5');
+      halo.setAttribute('stroke-linejoin', 'round');
+      labelLayer.appendChild(halo);
+      labelLayer.appendChild(svText(L.x, L.y, L.str, 'pin-label' + (taken ? ' taken' : ''), L.anchor));
+    });
+    svg.appendChild(labelLayer);
+
+    var pins = sv('g');
+    ids.forEach(function(id){
+      var n = STORY[id], p = pos[id];
+      var taken = state.visited.indexOf(id) !== -1;
+      var isEnd = !!n.ending;
+      var g = sv('g', { class:'pin' + (taken ? ' taken' : ''), tabindex:'0', role:'button' });
+      g.setAttribute('data-node', id);
+      g.setAttribute('aria-label', (isEnd ? 'Ending: ' : 'Decision point: ') + n.pinLabel +
+        (taken ? ' — on your route' : ''));
+
+      var r = isEnd ? 15 : 17;
+      g.appendChild(sv('circle', { class:'halo', cx:p.x, cy:p.y, r:r + 6 }));
+      g.appendChild(sv('circle', {
+        class:'body-shape', cx:p.x, cy:p.y, r:r,
+        fill: isEnd ? endingColor(n.ending) : (id === ROOT ? '#12706F' : '#1F9C9C')
+      }));
+
+      if (isEnd){
+        var mk = n.ending === 'bad'
+          ? 'M' + (p.x-5) + ' ' + (p.y-5) + ' l10 10 M' + (p.x+5) + ' ' + (p.y-5) + ' l-10 10'
+          : 'M' + (p.x-5.5) + ' ' + p.y + ' l4 4.5 l7.5 -8.5';
+        g.appendChild(sv('path', { d:mk, fill:'none', stroke:'#fff', 'stroke-width':3,
+          'stroke-linecap':'round', 'stroke-linejoin':'round' }));
+      } else {
+        g.appendChild(svText(p.x, p.y, String(numbers[id]), 'num', 'middle'));
+      }
+
+      g.appendChild(sv('circle', { class:'hit', cx:p.x, cy:p.y, r:r + 9 }));
+
+      function show(lock){ selectPin(id, lock); }
+      g.addEventListener('mouseenter', function(){ show(false); });
+      g.addEventListener('focus', function(){ show(false); });
+      g.addEventListener('click', function(){ show(true); });
+      g.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); show(true); }
+      });
+      pins.appendChild(g);
+    });
+    svg.appendChild(pins);
+
+    frame.appendChild(svg);
+    card.appendChild(frame);
+
+    var hint = el('p','map-hint');
+    hint.appendChild(icon('i-tap'));
+    hint.appendChild(document.createTextNode('Hover or tap any marker to read what happened there — and jump back in to try it.'));
+    card.appendChild(hint);
+
+    var detail = el('div','map-detail');
+    detail.id = 'mapDetail';
+    detail.appendChild(el('p','md-empty','Pick a marker on the map. There are ten endings in here; you have seen one.'));
+    card.appendChild(detail);
+
+    return card;
+  }
+
+  function selectPin(id, lock){
+    if (selectedPin && !lock && selectedPin.locked) return;
+    selectedPin = { id:id, locked:!!lock };
+
+    var svgRoot = document.querySelector('.map-svg');
+    if (svgRoot){
+      Array.prototype.forEach.call(svgRoot.querySelectorAll('.pin'), function(p){
+        p.classList.toggle('active', p.getAttribute('data-node') === id);
+      });
+    }
+
+    var n = STORY[id];
+    var box = document.getElementById('mapDetail');
+    if (!box) return;
+    box.innerHTML = '';
+
+    var head = el('div','md-head');
+    var tag = el('span','md-tag ' + (n.ending || 'step'),
+      n.ending === 'good' ? 'Safe' : n.ending === 'rough' ? 'Safe, the hard way' :
+      n.ending === 'bad' ? 'Goes wrong' : 'Decision point');
+    head.appendChild(tag);
+    if (state.visited.indexOf(id) !== -1) head.appendChild(el('span','md-tag yours','On your route'));
+    box.appendChild(head);
+
+    box.appendChild(el('h3', null, n.ending ? n.title : n.mapLabel));
+    box.appendChild(el('p','md-lesson', n.caption || (n.consequence || n.text[0])));
+
+    var target = n.ending ? (PARENT[id] ? PARENT[id].id : ROOT) : id;
+    if (target !== state.node || !n.ending){
+      var jump = el('button','btn btn-ghost btn-sm',
+        n.ending ? 'Replay the decision that led here' : 'Play from this point');
+      jump.type = 'button';
+      jump.addEventListener('click', function(){
+        if (target === ROOT){ state = freshState(); undoStack = []; }
+        else playTo(target);
+        render();
+      });
+      box.appendChild(jump);
+    }
+    postHeight();
+  }
+
+  /* =========================================================================
+     MEETING MODE / IFRAME HEIGHT / KEYBOARD
+     ====================================================================== */
+  var toggle = document.getElementById('modeToggle');
+  toggle.addEventListener('click', function(){
+    var on = document.body.classList.toggle('meeting');
+    toggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+    postHeight();
+  });
+
+  function postHeight(){
+    var h = Math.max(document.documentElement.scrollHeight,
+                     document.body ? document.body.scrollHeight : 0);
+    try { parent.postMessage({ type:'lostPatrolHeight', height:h }, '*'); } catch(e){}
+  }
+
+  function afterPaint(focusTarget){
+    if (focusTarget && focusTarget.focus){
+      try { focusTarget.focus({ preventScroll:true }); } catch(e){ focusTarget.focus(); }
+    }
+    postHeight();
+    window.setTimeout(postHeight, 400);
+  }
+
+  if (window.ResizeObserver) new ResizeObserver(postHeight).observe(document.documentElement);
+  else window.addEventListener('resize', postHeight);
+
+  document.addEventListener('keydown', function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var btns = stage.querySelectorAll('.choice');
+    if (!btns.length) return;
+    var k = e.key.toUpperCase();
+    var idx = LETTERS.indexOf(k);
+    if (idx === -1 && /^[1-4]$/.test(k)) idx = parseInt(k, 10) - 1;
+    if (idx > -1 && btns[idx]){ e.preventDefault(); btns[idx].click(); }
+  });
+
+  renderStop();
+})();
+</script>
+</body>
+</html>
